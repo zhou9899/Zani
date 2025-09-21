@@ -1,0 +1,78 @@
+nc function execute(sock, msg, commands, prefix) {
+    const filePath = path.resolve('./zani.jpeg');
+
+    const imageBuffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
+
+    // Updated menu text
+    let menuText = `
+╔════════════════════════════╗
+         🌌 Zani 🌌
+╠════════════════════════════╣
+🛠 Creator : Zhou
+📌 Prefix  : ${prefix}
+╠════════════════════════════╣
+💡 𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗠𝗲𝗻𝘂
+╠════════════════════════════╣
+
+🎉 • Fun Commands
+😂 .joke      → 🤣 Random joke
+🎲 .roll      → 🎲 Roll a dice
+🃏 .fortune   → 🔮 Get your fortune
+🎭 .meme      → 🖼️ Random meme
+
+🛠 • Utility Commands
+ℹ️ .help      → 📝 Show this menu
+🌐 .weather   → ☁️ Weather info
+
+🎵 • Media & Music
+🎶 .play      → 🎵 Play a song
+
+💾 Downloader
+.yt  → YouTube video downloader
+.ttk → Tiktok video downloader
+
+🕹 • Games
+🎮 .game      → 🕹️ Start a mini-game
+🧩 .puzzle   → 🧩 Brain teaser
+
+✨ Enjoy & have fun with Zani! ✨
+`;
+
+    // Dynamic rows for button-list
+    let rows = [];
+    for (let cmd in commands) {
+        rows.push({
+            title: `${prefix}${cmd}`,
+            description: commands[cmd].description || "No description",
+            rowId: `${prefix}${cmd}`
+        });
+    }
+
+    const sections = [
+        {
+            title: "📋 Available Commands",
+            rows: rows
+        }
+    ];
+
+    try {
+        await sock.sendMessage(
+            msg.key.remoteJid,
+            imageBuffer
+                ? {
+                      image: imageBuffer,
+                      caption: menuText,
+                      footer: "🤖 Zani • Zhou",
+                      sections,
+                      buttonText: "📖 Open Menu",
+                      jpegThumbnail: null // prevents thumbnail errors
+                  }
+                : { text: menuText }, // fallback if image missing
+            { quoted: msg }
+        );
+    } catch (err) {
+        console.log("❌ Sending menu failed, sending text-only fallback.");
+        await sock.sendMessage(msg.key.remoteJid, { text: menuText });
+    }
+}	
+

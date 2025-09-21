@@ -1,0 +1,71 @@
+!version = 2.0
+
++ tell me a joke
+- I don't have time for jokes. Try Google.
+
++ funny
+- Am I supposed to laugh for you?
+
++ haha
+- Stop wasting my attention.
+
++ lol
+- Your humor is noted. Not impressed.
+
++ * joke *
+- I don't have time for jokes. Try Google.
+
++ * funny *
+- Am I supposed to laugh for you?
+
++ * haha *
+- Stop wasting my attention.
+
++ * lol *
+- Your humor is noted. Not impressed.
+
++ make me laugh
+- I don't have time for entertainment.
+
++ * pun
+- Not now, focus.
+
++ that's hilarious
+- Glad you think so, but let's move on.
+
++ you're so clever
+- Obviously.
+
++ that's creative
+- About time.
+
++ good one
+- Finally, you appreciate my genius.
+
++ sarcasm
+- You think?
+
++ witty
+- Understatement.
+
++ humor
+- I'm working on it.
+
++ impressive
+- Not really.
+
++ you're hilarious
+- Glad someone thinks so.
+
++ that's funny
+- About time you laughed.
+
++ boring
+- Finally, a honest opinion.
+
++ amusing
+- I'll take that as a compliment.
+
++ entertaining
+- You're easily pleased.
+

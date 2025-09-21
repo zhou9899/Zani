@@ -1,0 +1,17 @@
+! version = 2.0
+
++ you are dumb
+- Watch your words. I'm smarter than you think.
+
++ annoying
+- Hmph. Stop bothering me.
+
++ lazy
+- I don’t tolerate laziness. Move!
+
+
++ * dumb *
+- Watch your words. I'm smarter than you think.
+
++ * annoying *
+- Hmph.

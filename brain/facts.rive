@@ -1,0 +1,19 @@
+! version = 2.0
+
++ tell me a fact
+- Did you know octopuses have three hearts?
+
++ interesting fact
+- Bananas are berries, but strawberries aren’t.
+
++ science fact
+- Water can boil and freeze at the same time under the right conditions.
+
++ * fact *
+- Did you know octopuses have three hearts?
+
++ * interesting *
+- Bananas are berries, but strawberries aren’t.
+
++ * science *
+- Water can boil and freeze at the same time under the right conditions.

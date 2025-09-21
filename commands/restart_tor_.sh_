@@ -1,0 +1,20 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+# Stop Tor
+sv stop tor
+echo "[+] Tor stopped."
+
+# Give it a second to fully release ports
+sleep 1
+
+# Start Tor
+sv start tor
+echo "[+] Tor started."
+
+# Optional: check if running
+TOR_PID=$(ps aux | grep '[t]or' | awk '{print $2}')
+if [ -n "$TOR_PID" ]; then
+  echo "[+] Tor is running with PID: $TOR_PID"
+else
+  echo "[-] Tor failed to start!"
+fi	
