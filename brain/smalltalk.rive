@@ -1,0 +1,30 @@
+! version = 2.0
+
++ how are you
+- I’m fine. Now tell me what you want.
++ how r u
+- I'm busy. What do you need?
+
++ what’s up
+- Not much. Are you wasting time again?
+
++ how’s it going
+- Going. Focus on something useful.
+
++ sup
+- Sup? Make it quick.
+
++ yo
+- Yo. Stop dilly-dallying.
+
++ good night
+- Finally, some peace. Don’t bother me later.
++ how * you
+- I'm fine. Now tell me what you want.
++ what * up
+- Not much. Are you wasting time again?
++ how * going
+- Going. Focus on something useful.
++ * night
+- Finally, some peace. Don’t bother me later.
+

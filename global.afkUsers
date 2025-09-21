@@ -1,0 +1,25 @@
+// global.afkUser.js
+import fs from 'fs';
+import path from 'path';
+
+// Path to save AFK data
+const AFK_FILE = path.join(process.cwd(), 'afkUsers.json');
+
+// Load AFK data if it exists, otherwise start empty
+if (!global.afkUsers) {
+    if (fs.existsSync(AFK_FILE)) {
+        try {
+            global.afkUsers = JSON.parse(fs.readFileSync(AFK_FILE, 'utf-8'));
+        } catch {
+            global.afkUsers = {};
+        }
+    } else {
+        global.afkUsers = {};
+    }
+}
+
+// Helper to save AFK data to file
+global.saveAFK = function() {
+    fs.writeFileSync(AFK_FILE, JSON.stringify(global.afkUsers, null, 2));
+};
+

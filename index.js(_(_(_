@@ -1,0 +1,37 @@
+sock.ev.on("messages.upsert", async (m) => {
+    try {
+        const msg = m.messages[0];
+        if (!msg.message || msg.key.fromMe) return;
+
+        // Get the text content
+        const text =
+            msg.message.conversation ||
+            msg.message.extendedTextMessage?.text ||
+            msg.message.buttonsResponseMessage?.selectedButtonId ||
+            msg.message.listResponseMessage?.singleSelectReply?.selectedRowId;
+        if (!text) return;
+
+        // Only respond to messages starting with prefix
+        if (!text.startsWith(prefix)) return;
+
+        const args = text.slice(prefix.length).trim().split(/ +/);
+        const command = args.shift().toLowerCase();
+
+        if (command === "ping") {
+            await sock.sendMessage(msg.key.remoteJid, { text: "🏓 Pong!" });
+        }
+
+        if (command === "joke") {
+            const joke = jokes[Math.floor(Math.random() * jokes.length)];
+            await sock.sendMessage(msg.key.remoteJid, { text: joke });
+        }
+
+        if (command === "help") {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `🤖 Bot Commands:\n${prefix}ping - Test bot\n${prefix}joke - Random joke\n${prefix}help - Show this menu`
+            });
+        }
+    } catch (err) {
+        console.error("Message handler error:", err);
+    }
+});
