@@ -183,3 +183,5 @@ setInterval(() => {
     currentSocket.ws.close();
   }
 }, 6 * 60 * 60 * 1000); // 6 hours
+// TEMP: force Git to detect changes
+
