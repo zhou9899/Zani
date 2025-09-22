@@ -1,4 +1,77 @@
 {
-  "lastCleaned": 1758427339041,
-  "users": {}
+  "lastCleaned": 1758518198944,
+  "users": {
+    "923440565387": {
+      "interactions": [
+        {
+          "message": "Lmao 😂meta be like",
+          "timestamp": 1758445264021
+        },
+        {
+          "message": "Lmao 😂meta be like",
+          "timestamp": 1758445274026
+        }
+      ],
+      "behavior_profile": [
+        "mediocre conversationalist - barely worth my attention"
+      ],
+      "last_updated": 1758445274026
+    },
+    "8801799798562": {
+      "interactions": [
+        {
+          "message": "MT-2 exam's done. Now the test exam 🙂\nI'll answer wrong anyways so i won't be able to take the actual one 💀👍\nOOF MY HEAD HURTS SO BADLY– AND HAVING DREAMS ABOUT LIKE EVERY FREAKING THING THAT I'VE OVER-THOUGHT ABOUT IN THESE DAYS 😭😭😭😭",
+          "timestamp": 1758518209843
+        },
+        {
+          "message": "MT-2 exam's done. Now the test exam 🙂\nI'll answer wrong anyways so i won't be able to take the actual one 💀👍\nOOF MY HEAD HURTS SO BADLY– AND HAVING DREAMS ABOUT LIKE EVERY FREAKING THING THAT I'VE OVER-THOUGHT ABOUT IN THESE DAYS 😭😭😭😭",
+          "timestamp": 1758518211028
+        }
+      ],
+      "behavior_profile": [
+        "over-explainer - get to the point"
+      ],
+      "last_updated": 1758518211028
+    },
+    "": {
+      "interactions": [
+        {
+          "message": "Lol it's me 😭😂",
+          "timestamp": 1758518215643
+        },
+        {
+          "message": "Lol it's me 😭😂",
+          "timestamp": 1758518216253
+        }
+      ],
+      "behavior_profile": [
+        "mediocre conversationalist - barely worth my attention"
+      ],
+      "last_updated": 1758518216253
+    },
+    "267388138319975": {
+      "interactions": [
+        {
+          "message": "Bot back",
+          "timestamp": 1758518270646
+        },
+        {
+          "message": "Bot back",
+          "timestamp": 1758518271755
+        },
+        {
+          "message": "Nothing",
+          "timestamp": 1758518279490
+        },
+        {
+          "message": "Nothing",
+          "timestamp": 1758518280108
+        }
+      ],
+      "behavior_profile": [
+        "mediocre conversationalist - barely worth my attention"
+      ],
+      "last_updated": 1758518280108
+    }
+  }
 }

@@ -1,48 +1,46 @@
-// index.js - CLEAN VERSION
-
+// index.js - Zani Bot (Proxy-Free & Robust)
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import qrcodeTerminal from "qrcode-terminal";
 import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } from "@whiskeysockets/baileys";
-import axios from "axios";
 import https from "https";
+import axios from "axios";
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ==================== ENVIRONMENT CLEANUP ====================
+// ==================== CLEAN ENV ====================
 [
-  'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY',
-  'http_proxy', 'https_proxy', 'all_proxy',
-  'NODE_TLS_REJECT_UNAUTHORIZED'
-].forEach(varName => {
-  process.env[varName] = "";
-  delete process.env[varName];
+  "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
+  "http_proxy", "https_proxy", "all_proxy",
+  "NODE_TLS_REJECT_UNAUTHORIZED"
+].forEach(v => {
+  process.env[v] = "";
+  delete process.env[v];
 });
 
 // ==================== SECURE AXIOS ====================
 const secureAxios = axios.create({
   proxy: false,
-  timeout: 45000,
-  httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: true, timeout: 45000 }),
+  timeout: 60000,
+  maxRedirects: 5,
+  httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: true }),
   headers: {
-    'User-Agent': 'WhatsApp/2.24.10.81 Android/13 Device/Samsung-S22',
-    'Origin': 'https://web.whatsapp.com',
-    'Accept': '*/*',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive'
+    "User-Agent": "WhatsApp/2.24.10.81 Android/13 Device/Samsung-S22",
+    "Origin": "https://web.whatsapp.com",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive"
   }
 });
-
 global.axios = secureAxios;
 
-// ==================== BOT CONFIG ====================
+// ==================== GLOBAL CONFIG ====================
 const ownersFile = path.join(__dirname, "owners.json");
 const modsFile = path.join(__dirname, "moderators.json");
-
 global.owners = fs.existsSync(ownersFile) ? JSON.parse(fs.readFileSync(ownersFile, "utf8")) : [];
 global.moderators = fs.existsSync(modsFile) ? JSON.parse(fs.readFileSync(modsFile, "utf8")) : [];
 
@@ -51,7 +49,7 @@ global.moderators = fs.existsSync(modsFile) ? JSON.parse(fs.readFileSync(modsFil
   if (fs.existsSync(file)) {
     fs.watchFile(file, { interval: 5000 }, () => {
       try {
-        global[file.includes('owners') ? 'owners' : 'moderators'] = JSON.parse(fs.readFileSync(file, "utf8"));
+        global[file.includes("owners") ? "owners" : "moderators"] = JSON.parse(fs.readFileSync(file, "utf8"));
         console.log(`🔄 ${path.basename(file)} updated`);
       } catch (err) {
         console.error(`❌ Failed to update ${file}: ${err.message}`);
@@ -71,19 +69,19 @@ if (fs.existsSync(LOCK_FILE)) {
   try {
     const pid = parseInt(fs.readFileSync(LOCK_FILE, "utf8"));
     process.kill(pid, 0);
-    console.log(`❌ Another bot instance running (PID: ${pid})`);
+    console.error(`❌ Another bot instance is running (PID: ${pid})`);
     process.exit(1);
   } catch {
     fs.unlinkSync(LOCK_FILE);
   }
 }
-
 fs.writeFileSync(LOCK_FILE, process.pid.toString());
 
+// ==================== CLEANUP & SHUTDOWN ====================
 const cleanup = () => {
   if (fs.existsSync(LOCK_FILE) && parseInt(fs.readFileSync(LOCK_FILE, "utf8")) === process.pid) {
     fs.unlinkSync(LOCK_FILE);
-    console.log('🧹 Cleanup completed');
+    console.log("🧹 Cleanup completed");
   }
 };
 
@@ -97,15 +95,15 @@ const shutdown = (signal) => {
 };
 
 process.on("exit", cleanup);
-process.on("SIGINT", () => shutdown('SIGINT'));
-process.on("SIGTERM", () => shutdown('SIGTERM'));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("uncaughtException", err => {
   console.error("💥 Uncaught Exception:", err);
   cleanup();
   process.exit(1);
 });
 
-// ==================== LAZY-LOAD BOT ====================
+// ==================== START BOT ====================
 async function startBot() {
   if (isConnecting || isShuttingDown) return;
   isConnecting = true;
@@ -117,7 +115,7 @@ async function startBot() {
     const sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
-      browser: Browsers.windows('Chrome'),
+      browser: Browsers.windows("Chrome"),
       connectTimeoutMs: 45000,
       keepAliveIntervalMs: 25000,
       markOnlineOnConnect: false,
@@ -127,8 +125,7 @@ async function startBot() {
       maxRetries: 3,
       maxQRCodes: 3,
       qrTimeout: 60000,
-      fetchOptions: { axiosInstance: secureAxios, timeout: 45000 }
-      // Removed custom logger to avoid logger.child error
+      fetchOptions: { axiosInstance: secureAxios, timeout: 60000 }
     });
 
     currentSocket = sock;
@@ -143,12 +140,10 @@ async function startBot() {
       if (connection === "open") {
         console.log("✅ Connected!");
         isConnecting = false;
-
         const [{ loadCommands }, { handleMessages }] = await Promise.all([
           import("./handlers/commandLoader.js"),
           import("./handlers/messageHandler.js")
         ]);
-
         await loadCommands(sock, path.join(__dirname, "commands"));
         handleMessages(sock);
         console.log("🎉 Bot ready!");
@@ -157,7 +152,7 @@ async function startBot() {
       if (connection === "close") {
         isConnecting = false;
         const code = lastDisconnect?.error?.output?.statusCode;
-        console.log(`❌ Connection closed. Code: ${code || 'unknown'}`);
+        console.log(`❌ Connection closed. Code: ${code || "unknown"}`);
         if (code === DisconnectReason.loggedOut) fs.rmSync("./auth_info", { recursive: true, force: true });
         if (!isShuttingDown) setTimeout(startBot, code === DisconnectReason.loggedOut ? 3000 : 10000);
       }
@@ -172,7 +167,7 @@ async function startBot() {
   }
 }
 
-// ==================== START BOT ====================
+// ==================== INITIALIZE ====================
 console.log("🤖 Zani Bot - Fast & Secure");
 startBot();
 
@@ -182,6 +177,4 @@ setInterval(() => {
     console.log("🔄 Scheduled maintenance restart...");
     currentSocket.ws.close();
   }
-}, 6 * 60 * 60 * 1000); // 6 hours
-// TEMP: force Git to detect changes
-
+}, 6 * 60 * 60 * 1000); // every 6 hours
