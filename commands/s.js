@@ -10,177 +10,102 @@ export const name = "s";
 export const description = "Convert image/video/sticker into WhatsApp-friendly sticker";
 export const aliases = ["sticker", "stick"];
 
-// WhatsApp's recommended sticker dimensions
-const MAX_STICKER_SIZE = 512;
-const TARGET_FPS = 30;
-const MAX_DURATION = 7; // seconds
+const MAX_SIZE = 512;      // WhatsApp sticker dimension
+const MAX_DURATION = 7;    // seconds for video/GIF
+const TARGET_FPS = 15;     // for video/GIF
 
 export async function execute(sock, msg, args) {
-  const jid = msg.key.remoteJid;
-  const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const jid = msg.key.remoteJid;
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
-  // Get the target message (quoted or current)
-  let targetMessage = msg;
-  if (quoted) {
-    targetMessage = {
-      key: {
-        remoteJid: jid,
-        id: msg.message.extendedTextMessage.contextInfo.stanzaId
-      },
-      message: quoted
-    };
-  }
-
-  // Check if target message has media
-  const hasMedia =
-    targetMessage.message?.imageMessage ||
-    targetMessage.message?.videoMessage ||
-    targetMessage.message?.stickerMessage;
-
-  if (!hasMedia) {
-    await sock.sendMessage(
-      jid,
-      { text: "❌ Please reply to an image, video, or sticker with `.s`" },
-      { quoted: msg }
-    );
-    return;
-  }
-
-  // Declare variables outside try block
-  let inputPath = null;
-  let outPath = null;
-
-  try {
-    // Download media
-    const buffer = await downloadMediaMessage(
-      targetMessage,
-      'buffer',
-      {},
-      { logger: console, reuploadRequest: sock.updateMediaMessage }
-    );
-
-    inputPath = path.join(tmpdir(), `sticker_in_${Date.now()}.dat`);
-    await writeFile(inputPath, buffer);
-    outPath = path.join(tmpdir(), `sticker_out_${Date.now()}.webp`);
-
-    const isSticker = targetMessage.message?.stickerMessage;
-    const isAnimated = isSticker && targetMessage.message.stickerMessage.isAnimated;
-    const isVideo = targetMessage.message?.videoMessage;
-    
-    // Get mimetype for better processing
-    const mimetype = targetMessage.message?.videoMessage?.mimetype ||
-                    targetMessage.message?.imageMessage?.mimetype ||
-                    targetMessage.message?.stickerMessage?.mimetype || '';
-    
-    const isGif = mimetype.includes('gif');
-
-    // If it's already a sticker, just add metadata and resend
-    if (isSticker) {
-      console.log("🔄 Processing existing sticker...");
-      await writeFile(outPath, buffer);
-      await writeExif(outPath, "𝒵𝒶𝓃𝒾'𝓈 𝒮𝓉𝒾𝒸𝓀𝑒𝓇𝓈", "𝒵𝒶𝓃𝒾'𝓈 𝐵𝑜𝓉");
-      
-      await sock.sendMessage(
-        jid,
-        { sticker: { url: outPath } },
-        { quoted: msg }
-      );
-      return;
+    let targetMessage = msg;
+    if (quoted) {
+        targetMessage = {
+            key: {
+                remoteJid: jid,
+                id: msg.message.extendedTextMessage.contextInfo.stanzaId
+            },
+            message: quoted
+        };
     }
 
-    // Convert to sticker (image/video/GIF → webp)
-    console.log(`🔄 Converting ${isVideo || isGif ? 'video/GIF' : 'image'} to sticker...`);
-    
-    await new Promise((resolve, reject) => {
-      const command = ffmpeg(inputPath);
-      
-      // Configure based on media type
-      if (isVideo || isGif) {
-        // For animated content
-        command
-          .outputOptions([
-            "-vcodec", "libwebp",
-            // Smart scaling to fit WhatsApp's dimensions while maintaining aspect ratio
-            "-vf", `scale=w=${MAX_STICKER_SIZE}:h=${MAX_STICKER_SIZE}:force_original_aspect_ratio=decrease:flags=lanczos,format=rgba`,
-            "-loop", "0",
-            "-t", MAX_DURATION.toString(), // Limit duration
-            "-r", TARGET_FPS.toString(), // Set frame rate
-            "-preset", "default",
-            "-an", // Remove audio
-            "-vsync", "2", // Video sync method
-            "-compression_level", "6",
-            "-qscale", "75",
-            "-quality", "80"
-          ]);
-      } else {
-        // For static images
-        command
-          .outputOptions([
-            "-vcodec", "libwebp",
-            // Smart scaling without unnecessary padding
-            "-vf", `scale=w=${MAX_STICKER_SIZE}:h=${MAX_STICKER_SIZE}:force_original_aspect_ratio=decrease:flags=lanczos,format=rgba`,
-            "-preset", "picture", // Better quality for images
-            "-compression_level", "6",
-            "-qscale", "90", // Higher quality for static images
-            "-quality", "90"
-          ]);
-      }
-      
-      command
-        .on("start", (cmdline) => {
-          console.log("FFmpeg command:", cmdline);
-        })
-        .save(outPath)
-        .on("end", () => {
-          console.log("✅ FFmpeg conversion completed successfully");
-          resolve();
-        })
-        .on("error", (err) => {
-          console.error("❌ FFmpeg error:", err);
-          reject(err);
-        });
-    });
+    const hasMedia = targetMessage.message?.imageMessage ||
+                     targetMessage.message?.videoMessage ||
+                     targetMessage.message?.stickerMessage;
 
-    // Add WhatsApp EXIF metadata
-    await writeExif(outPath, "𝒵𝒶𝓃𝒾'𝓈 𝒮𝓉𝒾𝒸𝓀𝑒𝓇𝓈", "𝒵𝒶𝓃𝒾'𝓈 𝐵𝑜𝓉");
-
-    // Send the final sticker with metadata
-    await sock.sendMessage(
-      jid,
-      {
-        sticker: { 
-          url: outPath 
-        }
-      },
-      { quoted: msg }
-    );
-
-    console.log("✅ Sticker created and sent successfully");
-
-  } catch (e) {
-    console.error("Sticker creation error:", e);
-    let errorMessage = "⚠️ Failed to create sticker. ";
-    
-    if (e.message.includes('duration')) {
-      errorMessage += "The media might be too long. Try something shorter than 7 seconds.";
-    } else if (e.message.includes('codec') || e.message.includes('format')) {
-      errorMessage += "Unsupported media format.";
-    } else {
-      errorMessage += "Please try with a different image or video.";
+    if (!hasMedia) {
+        await sock.sendMessage(jid, { text: "❌ Please reply to an image, video, or sticker with `.s`" }, { quoted: msg });
+        return;
     }
-    
-    await sock.sendMessage(
-      jid,
-      { text: errorMessage },
-      { quoted: msg }
-    );
-  } finally {
-    // Clean up temporary files
+
+    let inputPath, outPath;
+
     try {
-      if (inputPath) await unlink(inputPath).catch(() => {});
-      if (outPath) await unlink(outPath).catch(() => {});
-    } catch (cleanupError) {
-      console.error("Cleanup error:", cleanupError);
+        // Download media
+        const buffer = await downloadMediaMessage(targetMessage, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+        inputPath = path.join(tmpdir(), `sticker_in_${Date.now()}.dat`);
+        await writeFile(inputPath, buffer);
+        outPath = path.join(tmpdir(), `sticker_out_${Date.now()}.webp`);
+
+        const isSticker = !!targetMessage.message?.stickerMessage;
+        const isVideo = !!targetMessage.message?.videoMessage;
+        const mimetype = targetMessage.message?.videoMessage?.mimetype || targetMessage.message?.imageMessage?.mimetype || '';
+        const isGif = mimetype.includes("gif");
+
+        // If already a static sticker, just add metadata
+        if (isSticker && !isVideo && !isGif) {
+            await writeFile(outPath, buffer);
+            await writeExif(outPath, "𝒵𝒶𝓃𝒾'𝓈 Stickers", "Zani Bot");
+            await sock.sendMessage(jid, { sticker: { url: outPath } }, { quoted: msg });
+            return;
+        }
+
+        // FFmpeg scale + center-crop
+        const vf = isVideo || isGif
+            ? `scale=${MAX_SIZE}:${MAX_SIZE}:force_original_aspect_ratio=increase,crop=${MAX_SIZE}:${MAX_SIZE},format=rgba,fps=${TARGET_FPS}`
+            : `scale=${MAX_SIZE}:${MAX_SIZE}:force_original_aspect_ratio=increase,crop=${MAX_SIZE}:${MAX_SIZE},format=rgba`;
+
+        // Convert to webp sticker
+        await new Promise((resolve, reject) => {
+            const command = ffmpeg(inputPath);
+
+            command.outputOptions([
+                "-vcodec", "libwebp",
+                "-vf", vf,
+                isVideo || isGif ? "-loop 0" : "-preset picture",
+                isVideo || isGif ? `-t ${MAX_DURATION}` : undefined,
+                "-an",
+                "-compression_level", "6",
+                "-qscale", isVideo || isGif ? "75" : "90",
+                "-vsync", "0"
+            ].filter(Boolean));
+
+            command
+                .on("start", cmd => console.log("FFmpeg command:", cmd))
+                .on("end", () => { console.log("✅ Sticker conversion done"); resolve(); })
+                .on("error", err => { console.error("❌ FFmpeg error:", err); reject(err); })
+                .save(outPath);
+        });
+
+        // Add EXIF metadata
+        await writeExif(outPath, "𝒵𝒶𝓃𝒾'𝓈 Stickers", "Zani Bot");
+
+        // Send sticker
+        await sock.sendMessage(jid, { sticker: { url: outPath } }, { quoted: msg });
+        console.log("✅ Sticker sent successfully");
+
+    } catch (e) {
+        console.error("Sticker creation error:", e);
+        let msgText = "⚠️ Failed to create sticker.";
+        if (e.message.includes("duration")) msgText += " Media may be too long. Try <7 seconds.";
+        else if (e.message.includes("codec") || e.message.includes("format")) msgText += " Unsupported format.";
+        await sock.sendMessage(jid, { text: msgText }, { quoted: msg });
+    } finally {
+        try {
+            if (inputPath) await unlink(inputPath).catch(() => {});
+            if (outPath) await unlink(outPath).catch(() => {});
+        } catch (cleanupError) {
+            console.error("Cleanup error:", cleanupError);
+        }
     }
-  }
 }
