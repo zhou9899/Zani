@@ -15,7 +15,24 @@ export async function loadCommands(sock, commandsPath) {
     try {
       const fileUrl = pathToFileURL(path.join(commandsPath, file)).href;
       const cmdModule = await import(fileUrl);
-      const command = cmdModule.default || cmdModule;
+      
+      // Support both default export AND named exports
+      let command;
+      if (cmdModule.default) {
+        // Default export: { name, description, execute }
+        command = cmdModule.default;
+      } else if (cmdModule.name && cmdModule.execute) {
+        // Named exports: export const name, export function execute
+        command = {
+          name: cmdModule.name,
+          description: cmdModule.description || "No description",
+          execute: cmdModule.execute
+        };
+      } else {
+        console.warn(`⚠️ Skipping ${file}: invalid export format`);
+        failedCount++;
+        continue;
+      }
 
       if (!command.name || !command.execute) {
         console.warn(`⚠️ Skipping ${file}: missing name or execute`);
