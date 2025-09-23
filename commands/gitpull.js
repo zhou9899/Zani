@@ -1,51 +1,54 @@
-// gitpull.js
+// commands/gitpull.js
 import { exec } from "child_process";
 import fs from "fs";
-import path from "path";
 
-// Path to owners.json
-const ownersFile = path.resolve("./owners.json");
+export const name = "gitpull";
+export const description = "Pull latest updates from GitHub (Owner only)";
+export const ownerOnly = true;
 
-export default {
-  name: "gitpull",
-  prefix: ".",
-  description: "Pull latest updates from GitHub (owner only)",
-  execute: async (sock, message) => {
-    const sender = message.key?.remoteJid;
-    const text = message.message?.conversation || "";
+// Normalize numbers
+function normalizeNumber(number) {
+  return number.replace(/\D/g, "");
+}
 
-    if (!text.startsWith(".gitpull")) return; // Command trigger
+export async function execute(sock, msg, args) {
+  const jid = msg.key.remoteJid;
+  const senderNumber = normalizeNumber(msg.key.participant || msg.key.remoteJid);
 
-    // Load owners from JSON
-    let owners = [];
-    try {
-      const data = fs.readFileSync(ownersFile, "utf-8");
-      owners = JSON.parse(data);
-    } catch (err) {
-      console.error("Failed to read owners.json:", err);
-      await sock.sendMessage(sender, { text: "❌ Could not read owners file." });
-      return;
-    }
+  // Load owners
+  const ownersFile = "./owners.json";
+  let OWNERS = ["923219576020", "923440565387"]; // fallback
+  if (fs.existsSync(ownersFile)) {
+    OWNERS = JSON.parse(fs.readFileSync(ownersFile, "utf-8"));
+  }
 
-    if (!owners.includes(sender)) {
-      await sock.sendMessage(sender, { text: "❌ You are not authorized to run this command." });
-      return;
-    }
+  const normalizedOwners = OWNERS.map(normalizeNumber);
 
-    // Acknowledge command
-    await sock.sendMessage(sender, { text: "🔄 Pulling latest code from Git..." });
+  if (!normalizedOwners.includes(senderNumber)) {
+    return sock.sendMessage(jid, {
+      text: "❌ Only bot owners can use this command."
+    }, { quoted: msg });
+  }
 
+  try {
     // Execute git pull
-    exec("git pull origin main", { cwd: path.resolve("./") }, (error, stdout, stderr) => {
+    exec("git pull origin main", { cwd: "./" }, async (error, stdout, stderr) => {
       if (error) {
-        sock.sendMessage(sender, { text: `❌ Git pull failed:\n${error.message}` });
+        console.error("❌ Git pull error:", error);
+        await sock.sendMessage(jid, { text: `💥 Git pull failed:\n${error.message}` }, { quoted: msg });
         return;
       }
-      if (stderr) {
-        sock.sendMessage(sender, { text: `⚠️ Git pull stderr:\n${stderr}` });
-        return;
-      }
-      sock.sendMessage(sender, { text: `✅ Git pull complete:\n${stdout}` });
+
+      // Send output
+      await sock.sendMessage(jid, { text: `✅ Git pull successful!\n\n${stdout || stderr}` }, { quoted: msg });
+
+      // Optional: restart bot automatically after pull
+      exec("node index.js", (err) => {
+        if (err) console.error("❌ Restart error:", err);
+      });
     });
-  },
-};
+  } catch (err) {
+    console.error("❌ Command execution error:", err);
+    await sock.sendMessage(jid, { text: `💥 Error executing git pull: ${err.message}` }, { quoted: msg });
+  }
+}

@@ -7,21 +7,22 @@ export const adminOnly = false;
 if (!global.tttGames) global.tttGames = {};
 const games = global.tttGames;
 
-const BOARD_EMOJIS = { X: "❌", O: "⭕", empty: "⬜" }; // white square for empty
-const TURN_MS = 30000; // 30s per turn
+const BOARD_EMOJIS = { X: "❌", O: "⭕" };
+const TURN_MS = 30000;       // 30s per turn
 const INACTIVITY_MS = 600000; // 10m inactivity
 
-// prettier board with boxes
+// Render board with numbers for empty cells
 function renderBoard(board) {
-  return `
-${board[0]}│${board[1]}│${board[2]}
-───┼───┼───
-${board[3]}│${board[4]}│${board[5]}
-───┼───┼───
-${board[6]}│${board[7]}│${board[8]}
-`.trim();
+  return board
+    .map((cell, idx) => (cell ? BOARD_EMOJIS[cell] : `${idx + 1}️⃣`))
+    .reduce((acc, cell, idx) => {
+      const endLine = (idx + 1) % 3 === 0 ? "\n" : " | ";
+      return acc + cell + endLine;
+    }, "")
+    .trim();
 }
 
+// Check win
 function checkWin(board, symbol) {
   const wins = [
     [0,1,2],[3,4,5],[6,7,8],
@@ -31,6 +32,7 @@ function checkWin(board, symbol) {
   return wins.some(combo => combo.every(i => board[i] === symbol));
 }
 
+// End game cleanup
 async function endGame(sock, groupJid, reason = "Game ended.") {
   const g = games[groupJid];
   if (!g) return;
@@ -40,6 +42,7 @@ async function endGame(sock, groupJid, reason = "Game ended.") {
   delete games[groupJid];
 }
 
+// Move to next turn
 function nextTurn(sock, groupJid) {
   const g = games[groupJid];
   if (!g) return;
@@ -48,13 +51,16 @@ function nextTurn(sock, groupJid) {
   const symbol = g.symbols[player];
 
   sock.sendMessage(groupJid, {
-    text: `👉 It's @${player.split("@")[0]}'s turn (${BOARD_EMOJIS[symbol]})\n\n${renderBoard(g.board)}`,
+    text: `@${player.split("@")[0]}, it's your turn!\n\n${renderBoard(g.board)}`,
     mentions: [player]
   });
 
   if (g.timers?.turn) clearTimeout(g.timers.turn);
   g.timers.turn = setTimeout(() => {
-    sock.sendMessage(groupJid, { text: `⏰ @${player.split("@")[0]} took too long! Turn skipped.`, mentions: [player] });
+    sock.sendMessage(groupJid, {
+      text: `⏰ @${player.split("@")[0]} took too long! Turn skipped.`,
+      mentions: [player]
+    });
     nextTurn(sock, groupJid);
   }, TURN_MS);
 }
@@ -62,9 +68,13 @@ function nextTurn(sock, groupJid) {
 export async function execute(sock, msg, args) {
   try {
     const groupJid = msg.key.remoteJid;
-    const rawParticipant = msg.key.participant || msg.key.remoteJid;
-    const playerJid = rawParticipant;
-    const sub = (args[0] || "").toString().trim().toLowerCase();
+    const playerJid = msg.key.participant || msg.key.remoteJid;
+
+    // Detect number 1-9 as a move
+    let sub = (args[0] || "").toString().trim().toLowerCase();
+    if (!sub && /^[1-9]$/.test(msg.message?.conversation)) {
+      sub = msg.message.conversation.trim(); // use raw number if no prefix
+    }
 
     // ---------- START ----------
     if (sub === "start") {
@@ -74,7 +84,7 @@ export async function execute(sock, msg, args) {
         host: playerJid,
         players: [playerJid],
         symbols: { [playerJid]: "X" },
-        board: Array(9).fill(BOARD_EMOJIS.empty),
+        board: Array(9).fill(null),
         currentIndex: 0,
         timers: {}
       };
@@ -90,20 +100,19 @@ export async function execute(sock, msg, args) {
       const g = games[groupJid];
       if (!g) return sock.sendMessage(groupJid, { text: "❌ No game lobby open. Use .ttt start" });
       if (g.players.includes(playerJid)) return;
-
       if (g.players.length >= 2) return sock.sendMessage(groupJid, { text: "❌ Game already has 2 players." });
 
       g.players.push(playerJid);
       g.symbols[playerJid] = "O";
 
-      await sock.sendMessage(groupJid, { 
-        text: `✅ @${playerJid.split("@")[0]} joined! Game starting...`, 
-        mentions: [playerJid] 
+      await sock.sendMessage(groupJid, {
+        text: `✅ @${playerJid.split("@")[0]} joined! Game starting...`,
+        mentions: [playerJid]
       });
 
-      // show board immediately
+      // Show board and first turn
       sock.sendMessage(groupJid, {
-        text: `🎯 First turn: @${g.players[0].split("@")[0]} (${BOARD_EMOJIS[g.symbols[g.players[0]]]}):\n\n${renderBoard(g.board)}`,
+        text: `🎯 First turn: @${g.players[0].split("@")[0]} (${BOARD_EMOJIS[g.symbols[g.players[0]]]})\n\n${renderBoard(g.board)}`,
         mentions: g.players
       });
 
@@ -120,9 +129,9 @@ export async function execute(sock, msg, args) {
       const owners = global.owners || [];
       const normalizedOwners = owners.map(n => n.replace(/\D/g,""));
       const senderNumber = playerJid.split("@")[0];
-
       const isOwner = normalizedOwners.includes(senderNumber);
       const isHost = g.host === playerJid;
+
       let isAdmin = false;
       try {
         const md = await sock.groupMetadata(groupJid);
@@ -145,19 +154,22 @@ export async function execute(sock, msg, args) {
 
     const move = parseInt(sub) - 1;
     if (isNaN(move) || move < 0 || move > 8) return;
-    if (g.board[move] !== BOARD_EMOJIS.empty) return;
+    if (g.board[move]) return;
 
     const symbol = g.symbols[playerJid];
-    g.board[move] = BOARD_EMOJIS[symbol];
+    g.board[move] = symbol;
 
     // check win
-    if (checkWin(g.board, BOARD_EMOJIS[symbol])) {
-      await sock.sendMessage(groupJid, { text: `🎉 @${playerJid.split("@")[0]} wins!\n\n${renderBoard(g.board)}`, mentions: [playerJid] });
+    if (checkWin(g.board, symbol)) {
+      await sock.sendMessage(groupJid, {
+        text: `🎉 @${playerJid.split("@")[0]} wins!\n\n${renderBoard(g.board)}`,
+        mentions: [playerJid]
+      });
       return endGame(sock, groupJid, `🏁 Game over! Winner: @${playerJid.split("@")[0]}`);
     }
 
     // check draw
-    if (!g.board.includes(BOARD_EMOJIS.empty)) {
+    if (!g.board.includes(null)) {
       await sock.sendMessage(groupJid, { text: `🤝 It's a draw!\n\n${renderBoard(g.board)}` });
       return endGame(sock, groupJid, "🏁 Game ended in a draw.");
     }
@@ -167,6 +179,8 @@ export async function execute(sock, msg, args) {
 
   } catch (err) {
     console.error("TTT error:", err);
-    try { await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Error: ${err.message}` }); } catch {}
+    try {
+      await sock.sendMessage(msg.key.remoteJid, { text: `⚠️ Error: ${err.message}` });
+    } catch {}
   }
-}	
+}
