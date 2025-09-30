@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
 
+// Cache menu image once at module load to avoid per-call disk IO
+const filePath = path.join(process.cwd(), "zani.jpeg");
+const imageBuffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
+
 export const name = "help";
 export const description = "Show all commands (help)";
 
@@ -8,10 +12,7 @@ export async function execute(sock, msg, args) {
     const prefix = ".";
     const commands = global.commands || {};
     const jid = msg.key.remoteJid;
-
-    // Load Zani menu image
-    const filePath = path.join(process.cwd(), "zani.jpeg");
-    const imageBuffer = fs.existsSync(filePath) ? fs.readFileSync(filePath) : null;
+    // using cached imageBuffer
 
     // Help menu text with Zani personality
     const helpText = `

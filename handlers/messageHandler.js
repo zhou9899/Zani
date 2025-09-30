@@ -13,6 +13,12 @@ const CONFIG = {
   CLEANUP_INTERVAL: 30000,
 };
 
+// -------------------- Logging & Precompiled Regex --------------------
+const LOG_LEVEL = process.env.LOG_LEVEL || "info";
+const __isDebug = LOG_LEVEL === "debug";
+const __debug = (...args) => { if (__isDebug) console.log(...args); };
+const AI_TRIGGER_REGEX = CONFIG.AI_TRIGGERS.map(t => new RegExp(`\\b${t}\\b`, "i"));
+
 // -------------------- Cleanup Intervals --------------------
 setInterval(() => {
   const now = Date.now();
@@ -100,7 +106,7 @@ const helpers = {
     if (context?.mentionedJid?.some(jid => jid.replace(/\D/g, "") === cleanBot)) return true;
 
     // Trigger word detection
-    return CONFIG.AI_TRIGGERS.some(t => new RegExp(`\\b${t}\\b`, "i").test(text)) &&
+    return AI_TRIGGER_REGEX.some(rx => rx.test(text)) &&
       text.replace(/@\d+/g, "").trim().length >= 2;
   }
 };
@@ -175,8 +181,8 @@ export function handleMessages(sock) {
 
       if (!isRegistered(senderNumber)) registerUser(senderNumber, senderNumber);
 
-      console.log("📨 Message from:", getRealNumber(senderNumber), "Content:", text);
-      console.log("🏷️ Group chat:", isGroup);
+      __debug("📨 Message from:", getRealNumber(senderNumber), "Content:", text);
+      __debug("🏷️ Group chat:", isGroup);
 
       // Commands
       if (text.startsWith(".")) {
@@ -189,7 +195,7 @@ export function handleMessages(sock) {
       if (helpers.shouldTriggerAI(text, contextInfo, isGroup, botNumber)) {
         await handleAI(sock, msg, text, sender, senderNumber, isGroup, contextInfo);
       } else {
-        console.log("Not triggering AI - no valid trigger detected");
+        __debug("Not triggering AI - no valid trigger detected");
       }
 
     } catch (err) {

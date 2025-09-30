@@ -8,6 +8,11 @@ const brainPath = path.join(process.cwd(), 'brain');
 const memoryPath = path.join(process.cwd(), 'memory.json');
 const userDbPath = path.join(process.cwd(), 'user-db.json');
 
+// ------------------ Logging ------------------
+const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+const __isDebug = LOG_LEVEL === 'debug';
+const __debug = (...args) => { if (__isDebug) console.log(...args); };
+
 // ------------------ Multiple Groq API Keys ------------------
 let groqApiKeys = [];
 let groqClients = [];
@@ -180,6 +185,16 @@ function saveMemory(memory) {
   }
 }
 
+// Debounced saver to avoid disk writes on every message
+let __memorySaveTimer = null;
+function scheduleMemorySave() {
+  if (__memorySaveTimer) return;
+  __memorySaveTimer = setTimeout(() => {
+    __memorySaveTimer = null;
+    saveMemory(MEMORY);
+  }, 1000);
+}
+
 MEMORY = loadMemory();
 
 // ------------------ Number Normalization ------------------
@@ -238,7 +253,7 @@ export function updateUserMemory(userNumber, message) {
   }
 
   userMem.last_updated = now;
-  saveMemory(MEMORY);
+  scheduleMemorySave();
 
   return traits;
 }
@@ -294,7 +309,7 @@ function getOfflineResponse(text) {
 // ------------------ Groq AI with Priority Order ------------------
 export async function getAIResponse(msg, userNumber) {
   const text = msg.toLowerCase().trim();
-  console.log('🧠 AI Input:', text);
+  __debug('🧠 AI Input:', text);
 
   // Update memory first
   const userTraits = updateUserMemory(userNumber, msg);
@@ -306,7 +321,7 @@ export async function getAIResponse(msg, userNumber) {
     for (let attempt = 0; attempt < Math.min(2, groqClients.length); attempt++) {
       try {
         const groq = getNextGroqClient();
-        console.log(`🔄 Trying API key ${currentKeyIndex}`);
+        __debug(`🔄 Trying API key ${currentKeyIndex}`);
 
         const context = userTraits.join(', ');
         const completion = await Promise.race([
@@ -329,7 +344,7 @@ export async function getAIResponse(msg, userNumber) {
         ]);
 
         const aiText = completion.choices?.[0]?.message?.content?.trim();
-        console.log('✅ Groq API success');
+        __debug('✅ Groq API success');
         return aiText || getOfflineResponse(text);
 
       } catch (error) {
@@ -350,14 +365,21 @@ export async function getAIResponse(msg, userNumber) {
   // 2️⃣ SECOND: Try brain matching if Groq fails
   const brainResponse = findBrainMatch(text);
   if (brainResponse) {
-    console.log('✅ Using brain response');
+    __debug('✅ Using brain response');
     return brainResponse;
   }
 
   // 3️⃣ THIRD: Use offline response as last resort
-  console.log('❌ All API attempts failed, using offline response');
+  __debug('❌ All API attempts failed, using offline response');
   return getOfflineResponse(text);
 }
+
+// Ensure memory flush on shutdown
+process.on('beforeExit', () => {
+  if (__memorySaveTimer) {
+    saveMemory(MEMORY);
+  }
+});
 
 // ------------------ Debug Functions ------------------
 export function debugBrain() {
