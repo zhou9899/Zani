@@ -1,87 +1,87 @@
-// commands/play.js - FAST AUDIO WITH VIDEO COVER IMAGE
+// commands/play.js
+import fs from "fs";
+import fetch from "node-fetch";
+import { exec } from "child_process";
+import util from "util";
 import play from "play-dl";
-import youtubedl from 'youtube-dl-exec';
-import fs from 'fs';
-import path from 'path';
-import axios from 'axios';
 
-export const name = "play";
-export const description = "Search YouTube and download audio";
+const execPromise = util.promisify(exec);
 
-function cleanupFiles(...files) {
-    files.forEach(file => {
-        if (fs.existsSync(file)) {
-            try { fs.unlinkSync(file); } catch { }
+export default {
+  name: "play",
+  description: "Play music from YouTube",
+  async execute(sock, msg, args) {
+    const chatId = msg.key.remoteJid;
+
+    if (!args[0]) {
+      return sock.sendMessage(
+        chatId,
+        { text: "❌ Provide a song name or YouTube link\n\nExample: .play never gonna give you up" },
+        { quoted: msg }
+      );
+    }
+
+    try {
+      const query = args.join(" ");
+      let ytInfo;
+
+      // if input is a link
+      if (query.includes("youtube.com") || query.includes("youtu.be")) {
+        ytInfo = await play.video_basic_info(query);
+      } else {
+        // search YouTube
+        const results = await play.search(query, { limit: 1 });
+        if (!results.length) {
+          return sock.sendMessage(chatId, { text: "❌ No results found." }, { quoted: msg });
         }
-    });
-}
+        ytInfo = await play.video_basic_info(results[0].url);
+      }
 
-async function sendCoverImage(coverUrl, title, jid, sock, msg) {
-    if (!coverUrl) {
-        await sock.sendMessage(jid, { text: `🎵 ${title}` }, { quoted: msg });
-        return;
-    }
-    try {
-        const response = await axios.get(coverUrl, { responseType: 'stream', timeout: 10000 });
-        await sock.sendMessage(jid, {
-            image: { stream: response.data },
-            caption: `🎵 ${title}`,
-        }, { quoted: msg });
-    } catch {
-        await sock.sendMessage(jid, { text: `🎵 ${title}` }, { quoted: msg });
-    }
-}
+      const title = ytInfo.video_details.title;
+      const duration = ytInfo.video_details.durationRaw || "Unknown";
+      const videoUrl = ytInfo.video_details.url;
+      const thumbnail = ytInfo.video_details.thumbnails?.[0]?.url || null;
 
-export async function execute(sock, msg, args) {
-    const jid = msg.key.remoteJid;
+      // send thumbnail + info first
+      if (thumbnail) {
+        const thumbBuffer = Buffer.from(await (await fetch(thumbnail)).arrayBuffer());
+        await sock.sendMessage(
+          chatId,
+          {
+            image: thumbBuffer,
+            caption: `🎶 *${title}*\n⏱️ Duration: ${duration}\n\n⬇️ Downloading audio...`
+          },
+          { quoted: msg }
+        );
+      } else {
+        await sock.sendMessage(
+          chatId,
+          { text: `🎶 *${title}*\n⏱️ Duration: ${duration}\n\n⬇️ Downloading audio...` },
+          { quoted: msg }
+        );
+      }
 
-    if (!args.length) {
-        return await sock.sendMessage(jid, { text: "❌ Provide a search term." }, { quoted: msg });
-    }
+      // download audio with yt-dlp
+      const outputFile = `/data/data/com.termux/files/home/Zani/temp/${Date.now()}.mp3`;
+      const cmd = `yt-dlp -f 140 -x --audio-format mp3 --audio-quality 0 -o "${outputFile}" "${videoUrl}"`;
+      await execPromise(cmd);
 
-    const tempDir = path.join(process.cwd(), 'temp');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    const tempAudio = path.join(tempDir, `audio-${Date.now()}.mp3`);
+      // send audio
+      await sock.sendMessage(
+        chatId,
+        {
+          audio: fs.readFileSync(outputFile),
+          mimetype: "audio/mp4",
+          fileName: `${title}.mp3`
+        },
+        { quoted: msg }
+      );
 
-    try {
-        // 1. Search YouTube quickly
-        const results = await play.search(args.join(" "), { limit: 1 });
-        if (!results.length) return await sock.sendMessage(jid, { text: "❌ No results found." }, { quoted: msg });
-
-        const video = results[0];
-        const url = video.url;
-        const title = video.title?.substring(0, 256) || 'Unknown Title';
-        const coverUrl = video.thumbnails?.[0]?.url;
-
-        // 2. Send video cover thumbnail with title
-        await sendCoverImage(coverUrl, title, jid, sock, msg);
-
-        // 3. Download audio SUPER FAST with yt-dlp
-        await youtubedl(url, {
-            extractAudio: true,
-            audioFormat: 'mp3',
-            audioQuality: '4',
-            output: tempAudio,
-            noWarnings: true,
-            noCallHome: true,
-            noCheckCertificate: true,
-            preferFreeFormats: true,
-            socketTimeout: 30000,
-            retries: 3
-        });
-
-        // 4. Send audio only, quoted
-        await sock.sendMessage(jid, {
-            audio: fs.readFileSync(tempAudio),
-            mimetype: 'audio/mpeg',
-            fileName: `${title}.mp3`,
-            ptt: false
-        }, { quoted: msg });
+      fs.unlinkSync(outputFile); // cleanup
 
     } catch (err) {
-        console.error("❌ Error in .play command:", err);
-        await sock.sendMessage(jid, { text: `❌ Failed: ${err.message}` }, { quoted: msg });
-    } finally {
-        cleanupFiles(tempAudio);
+      console.error("[PLAY ERROR]", err);
+      await sock.sendMessage(chatId, { text: `❌ Failed: ${err.message}` }, { quoted: msg });
     }
-}
+  }
+};

@@ -1,17 +1,19 @@
-import { getAIResponse, updateUserMemory, registerUser, isRegistered, getRealNumber } from "../helpers/ai.js";
+import { getAIResponse, updateUserMemory, registerUser, isRegistered, getRealNumber, ZANI_PROFILE } from "../helpers/ai.js";
 import { handleAFKMentions } from "../commands/afk.js";
 
-const userCooldowns = new Map();
-const userRequestTimestamps = new Map();
-const groupAdminCache = new Map();
-
+// -------------------- Config & Cooldowns --------------------
 const CONFIG = {
   RATE_LIMIT_WINDOW: 2000, // 2 seconds
   MAX_REQUESTS_PER_MINUTE: 30,
   AI_TRIGGERS: ["zani", "bot", "assistant", "help"],
   IGNORE_PREFIXES: [".", "!", "/", "#"],
   CLEANUP_INTERVAL: 30000,
+  CUTE_GROUP_CHANCE: 0.05 // 5% chance to randomly react cutely in group when Zhou talks
 };
+
+const userCooldowns = new Map();
+const userRequestTimestamps = new Map();
+const groupAdminCache = new Map();
 
 // -------------------- Cleanup Intervals --------------------
 setInterval(() => {
@@ -90,18 +92,15 @@ const helpers = {
     if (CONFIG.IGNORE_PREFIXES.some(p => text.startsWith(p))) return false;
     if (!isGroup) return true;
 
-    // Reply to bot's message
     if (context?.quotedMessage) {
       const quotedSender = (context.participant || context?.quotedMessage?.sender || "").replace(/\D/g, "");
       if (quotedSender === cleanBot) return true;
     }
 
-    // Mention bot
     if (context?.mentionedJid?.some(jid => jid.replace(/\D/g, "") === cleanBot)) return true;
 
-    // Trigger word detection
     return CONFIG.AI_TRIGGERS.some(t => new RegExp(`\\b${t}\\b`, "i").test(text)) &&
-      text.replace(/@\d+/g, "").trim().length >= 2;
+           text.replace(/@\d+/g, "").trim().length >= 2;
   }
 };
 
@@ -109,7 +108,6 @@ const helpers = {
 export async function executeCommand(sock, msg, text, isGroup, sender, senderNumber) {
   const args = text.trim().split(/ +/);
   const cmdName = args.shift().slice(1).toLowerCase();
-
   const cmd = global.commands[cmdName];
   if (!cmd) return console.log(`Unknown command: ${cmdName}`);
 
@@ -126,9 +124,8 @@ export async function executeCommand(sock, msg, text, isGroup, sender, senderNum
     }
   }
 
-  try {
-    await cmd.execute(sock, msg, args);
-  } catch (err) {
+  try { await cmd.execute(sock, msg, args); } 
+  catch (err) { 
     console.error(`Error executing ${cmdName}:`, err);
     sock.sendMessage(msg.key.remoteJid, { text: "❌ Command execution error." }, { quoted: msg });
   }
@@ -142,13 +139,27 @@ export async function handleAI(sock, msg, text, sender, senderNumber, isGroup, c
     return sock.sendMessage(msg.key.remoteJid, { text: "⚠️ Rate limit exceeded." }, { quoted: msg });
   }
 
+  const isZhou = senderNumber === ZANI_PROFILE.husbandNumber;
+
   try {
-    const aiReply = await getAIResponse(text, senderNumber);
+    const profile = {
+      number: senderNumber,
+      name: ZANI_PROFILE.name,
+      traits: ZANI_PROFILE.traits.join(", "),
+      husbandNumber: ZANI_PROFILE.husbandNumber
+    };
+
+    const aiReply = await getAIResponse(text, profile, isZhou);
     updateUserMemory(senderNumber, text);
 
-    // Reply to sender + mentions
+    // Occasionally cute reaction in group chat when Zhou talks
+    if (isGroup && isZhou && Math.random() < CONFIG.CUTE_GROUP_CHANCE) {
+      await sock.sendMessage(msg.key.remoteJid, { text: `Zhou, I’m watching you~ 💕` });
+    }
+
     const mentions = new Set([sender, ...(context?.mentionedJid || [])]);
     await sock.sendMessage(msg.key.remoteJid, { text: aiReply, mentions: Array.from(mentions) }, { quoted: msg });
+
   } catch (err) {
     console.error("AI response error:", err);
     sock.sendMessage(msg.key.remoteJid, { text: "🤖 AI error." }, { quoted: msg });
@@ -159,6 +170,7 @@ export async function handleAI(sock, msg, text, sender, senderNumber, isGroup, c
 export function handleMessages(sock) {
   sock.ev.on("messages.upsert", async ({ messages }) => {
     if (!messages?.length) return;
+
     const msg = messages[0];
     if (!msg.message || msg.key.fromMe) return;
 
@@ -178,13 +190,11 @@ export function handleMessages(sock) {
       console.log("📨 Message from:", getRealNumber(senderNumber), "Content:", text);
       console.log("🏷️ Group chat:", isGroup);
 
-      // Commands
       if (text.startsWith(".")) {
         await executeCommand(sock, msg, text, isGroup, sender, senderNumber);
         return;
       }
 
-      // AI triggers
       const contextInfo = msg.message?.extendedTextMessage?.contextInfo || {};
       if (helpers.shouldTriggerAI(text, contextInfo, isGroup, botNumber)) {
         await handleAI(sock, msg, text, sender, senderNumber, isGroup, contextInfo);
@@ -199,4 +209,3 @@ export function handleMessages(sock) {
 }
 
 export const _testHelpers = helpers;
-

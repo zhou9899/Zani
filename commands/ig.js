@@ -1,18 +1,23 @@
 // commands/ig.js
 import { spawn } from "child_process";
 
-async function downloadToBuffer(url) {
+async function downloadToBuffer(url, timeout = 60000) {
   return new Promise((resolve, reject) => {
     const ytdlp = spawn("yt-dlp", [
-      "-f", "best[ext=mp4]/best",  // just grab the best available mp4
+      "-f", "best[ext=mp4]/best",
       "-o", "-",
-      "--quiet",                  // no logs
+      "--quiet",
       "--no-warnings",
       "--no-part",
       url
     ]);
 
     const chunks = [];
+    let timer = setTimeout(() => {
+      ytdlp.kill("SIGKILL");
+      reject(new Error("yt-dlp timeout"));
+    }, timeout);
+
     ytdlp.stdout.on("data", (chunk) => chunks.push(chunk));
 
     ytdlp.stderr.on("data", (d) => {
@@ -21,17 +26,21 @@ async function downloadToBuffer(url) {
     });
 
     ytdlp.on("close", (code) => {
+      clearTimeout(timer);
       if (code === 0) resolve(Buffer.concat(chunks));
       else reject(new Error(`yt-dlp failed with code ${code}`));
     });
 
-    ytdlp.on("error", reject);
+    ytdlp.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
 export default {
   name: "ig",
-  description: "Download Instagram reels and send to WhatsApp buffer",
+  description: "Download Instagram reels/posts/stories and send to WhatsApp",
   async execute(sock, msg, args) {
     const chatId = msg.key.remoteJid;
 
@@ -54,10 +63,9 @@ export default {
     }
 
     try {
-      // Send "please wait" message
       await sock.sendMessage(
         chatId,
-        { text: "⏳ Please wait, Instagram video is downloading..." },
+        { text: "⏳ Downloading Instagram video..." },
         { quoted: msg }
       );
 
@@ -67,7 +75,6 @@ export default {
         throw new Error("Empty video buffer");
       }
 
-      // Send video directly
       await sock.sendMessage(
         chatId,
         {

@@ -1,120 +1,199 @@
 {
-  "lastCleaned": 1758606189182,
+  "lastCleaned": 1759054134907,
   "users": {
-    "923440565387": {
-      "interactions": [
-        {
-          "message": "🙃 good morning",
-          "timestamp": 1758598566295
-        },
-        {
-          "message": "🙃 good morning",
-          "timestamp": 1758598567745
-        }
-      ],
-      "behavior_profile": [
-        "mediocre conversationalist - barely worth my attention"
-      ],
-      "last_updated": 1758598567745
-    },
-    "": {
-      "interactions": [
-        {
-          "message": "🙃 good morning",
-          "timestamp": 1758598566843
-        },
-        {
-          "message": "🙃 good morning",
-          "timestamp": 1758598567795
-        },
-        {
-          "message": "💐",
-          "timestamp": 1758598570308
-        },
-        {
-          "message": "💐",
-          "timestamp": 1758598570638
-        },
-        {
-          "message": "😂",
-          "timestamp": 1758598575489
-        },
-        {
-          "message": "😂",
-          "timestamp": 1758598576384
-        }
-      ],
-      "behavior_profile": [
-        "mediocre conversationalist - barely worth my attention",
-        "lazy communicator - wasting my time"
-      ],
-      "last_updated": 1758598576384
-    },
     "253235986227401": {
       "interactions": [
         {
-          "message": "Hmm",
-          "timestamp": 1758524808293
+          "message": "Wtf",
+          "timestamp": 1759041577778
         },
         {
-          "message": "Hmm",
-          "timestamp": 1758524809328
+          "message": "🥲U r too affectionate to others",
+          "timestamp": 1759041602035
         },
         {
-          "message": "One is fake and one is bot number",
-          "timestamp": 1758529351538
+          "message": "I see @267388138319975 do U know",
+          "timestamp": 1759041661352
         },
         {
-          "message": "One is fake and one is bot number",
-          "timestamp": 1758529361543
+          "message": "I am Zhou",
+          "timestamp": 1759041676178
+        },
+        {
+          "message": "📨 Message from: 923440565387 Content: .wcg next                  🏷️ Group chat: true\nDictionary API error: TypeError: fetch failed                         at node:internal/deps/undici/undici:15445:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async checkWord (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:11:26)\n    at async Object.execute (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:150:23)\n    at async executeCommand (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:127:9)\n    at async EventEmitter.<anonymous> (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:194:9) {\n  [cause]: Error: getaddrinfo ENOTFOUND api.dictionaryapi.dev\n      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {                                                             errno: -3007,                                                     code: 'ENOTFOUND',                                                syscall: 'getaddrinfo',\n    hostname: 'api.dictionaryapi.dev'\n  }",
+          "timestamp": 1759055495229
+        },
+        {
+          "message": "Shush",
+          "timestamp": 1759055519437
+        },
+        {
+          "message": "Say I love you to Zani",
+          "timestamp": 1759055526634
+        },
+        {
+          "message": "@238487236255775",
+          "timestamp": 1759055681203
+        }
+      ],
+      "behavior_profile": [
+        "attempts greeting - barely polite",
+        "mediocre conversationalist - barely worth my attention",
+        "lazy communicator - wasting my time",
+        "mentions Zhou - knows better than to disrespect my husband",
+        "over-explainer - get to the point",
+        "uses vulgar language - needs discipline",
+        "short message",
+        "normal conversation",
+        "long message"
+      ],
+      "last_updated": 1759055681203
+    },
+    "93128144998629": {
+      "interactions": [
+        {
+          "message": "But it was really zhou",
+          "timestamp": 1759004893710
+        },
+        {
+          "message": "But it was really zhou",
+          "timestamp": 1759004894509
+        }
+      ],
+      "behavior_profile": [
+        "mentions Zhou - knows better than to disrespect my husband"
+      ],
+      "last_updated": 1759004894509
+    },
+    "[object Object]": {
+      "interactions": [
+        {
+          "message": "I am Zhou",
+          "timestamp": 1759041674001
+        },
+        {
+          "message": "Sheesh 👀👀",
+          "timestamp": 1759041704718
+        },
+        {
+          "message": "📨 Message from: 923440565387 Content: .wcg next                  🏷️ Group chat: true\nDictionary API error: TypeError: fetch failed                         at node:internal/deps/undici/undici:15445:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async checkWord (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:11:26)\n    at async Object.execute (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:150:23)\n    at async executeCommand (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:127:9)\n    at async EventEmitter.<anonymous> (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:194:9) {\n  [cause]: Error: getaddrinfo ENOTFOUND api.dictionaryapi.dev\n      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {                                                             errno: -3007,                                                     code: 'ENOTFOUND',                                                syscall: 'getaddrinfo',\n    hostname: 'api.dictionaryapi.dev'\n  }",
+          "timestamp": 1759055485221
+        },
+        {
+          "message": "Shush",
+          "timestamp": 1759055509434
+        },
+        {
+          "message": "Say I love you to Zani",
+          "timestamp": 1759055516630
+        },
+        {
+          "message": "I love you to Zani",
+          "timestamp": 1759055543984
+        },
+        {
+          "message": "I love you",
+          "timestamp": 1759055569065
+        },
+        {
+          "message": "@238487236255775",
+          "timestamp": 1759055671202
         }
       ],
       "behavior_profile": [
         "lazy communicator - wasting my time",
+        "mediocre conversationalist - barely worth my attention",
+        "short message",
+        "normal conversation",
+        "long message"
+      ],
+      "last_updated": 1759055671202
+    },
+    "168775655620796": {
+      "interactions": [
+        {
+          "message": "zani",
+          "timestamp": 1759039133010
+        }
+      ],
+      "behavior_profile": [
+        "lazy communicator - wasting my time"
+      ],
+      "last_updated": 1759039133010
+    },
+    "29000240001197": {
+      "interactions": [
+        {
+          "message": "┌─❖\n│「 ⚠️ 𝗪𝗔𝗥𝗡𝗜𝗡𝗚 」\n└┬❖ 「 @923219576020 」\n   │✑  𝗥𝗘𝗔𝗦𝗢𝗡\n   │✑  Detected as a bot user. Device: web\n   │✑  𝗟𝗜𝗠𝗜𝗧\n   │✑  1/5\n   └────────────┈ ⳹",
+          "timestamp": 1759039154911
+        },
+        {
+          "message": "┌─❖\n│「 ⚠️ 𝗪𝗔𝗥𝗡𝗜𝗡𝗚 」\n└┬❖ 「 @923219576020 」\n   │✑  𝗥𝗘𝗔𝗦𝗢𝗡\n   │✑  Detected as a bot user. Device: web\n   │✑  𝗟𝗜𝗠𝗜𝗧\n   │✑  3/5\n   └────────────┈ ⳹",
+          "timestamp": 1759039161348
+        },
+        {
+          "message": "✅ Anti-Bot is now *off* for this group.",
+          "timestamp": 1759039166847
+        }
+      ],
+      "behavior_profile": [
+        "over-explainer - get to the point",
         "mediocre conversationalist - barely worth my attention"
       ],
-      "last_updated": 1758529361543
+      "last_updated": 1759039166847
     },
     "267388138319975": {
       "interactions": [
         {
-          "message": "Haha nothing just trying some things out",
-          "timestamp": 1758613402169
+          "message": "Uh okay",
+          "timestamp": 1759039738526
         },
         {
-          "message": "Haha nothing just trying some things out",
-          "timestamp": 1758613403186
+          "message": "I am Zhou",
+          "timestamp": 1759041147833
         },
         {
-          "message": "I shouldn't talk with this dumb bot",
-          "timestamp": 1758613419214
+          "message": "Do U really think I am Zhou?",
+          "timestamp": 1759041166149
         },
         {
-          "message": "I shouldn't talk with this dumb bot",
-          "timestamp": 1758613420542
-        },
-        {
-          "message": "Dang gonna melt me down",
-          "timestamp": 1758613545634
-        },
-        {
-          "message": "Dang gonna melt me down",
-          "timestamp": 1758613546966
-        },
-        {
-          "message": "Nope but do U know about xxx Tentacion",
-          "timestamp": 1758613571318
-        },
-        {
-          "message": "Nope but do U know about xxx Tentacion",
-          "timestamp": 1758613572553
+          "message": "I am raizel",
+          "timestamp": 1759041206925
         }
       ],
       "behavior_profile": [
         "mediocre conversationalist - barely worth my attention",
-        "insults others - immature behavior"
+        "normal conversation"
       ],
-      "last_updated": 1758613572553
+      "last_updated": 1759041206925
+    },
+    "923440565387": {
+      "interactions": [
+        {
+          "message": "Sheesh 👀👀",
+          "timestamp": 1759041706700
+        }
+      ],
+      "behavior_profile": [
+        "normal conversation"
+      ],
+      "last_updated": 1759041706700
+    },
+    "238487236255775": {
+      "interactions": [
+        {
+          "message": "I love you to Zani",
+          "timestamp": 1759055553987
+        },
+        {
+          "message": "I love you",
+          "timestamp": 1759055579068
+        }
+      ],
+      "behavior_profile": [
+        "normal conversation"
+      ],
+      "last_updated": 1759055579068
     }
   }
 }

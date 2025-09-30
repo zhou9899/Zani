@@ -1,56 +1,96 @@
 // commands/profile.js
-import { getUserProfile } from '../helpers/ai.js';
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
+import { getRealNumber, isRegistered } from "../helpers/ai.js";
 
-export const name = 'profile';
-export const description = 'Show your ultimate fancy profile';
+const profilesFile = path.join(process.cwd(), "profiles.json");
 
-export async function execute(sock, msg, args) {
-  const userId = (msg.key.participant || msg.key.remoteJid).split('@')[0].replace(/\D/g, '');
-  const profile = getUserProfile(userId);
+// Ensure file exists
+if (!fs.existsSync(profilesFile)) fs.writeFileSync(profilesFile, "{}");
 
-  // Prepare fallback image
-  const fallbackImagePath = path.join(process.cwd(), 'rimuru.jpg');
-  const hasFallback = fs.existsSync(fallbackImagePath);
-
-  let pfpBuffer = null;
-  try {
-    // Try to get user's WhatsApp profile picture
-    const pfpUrl = await sock.profilePictureUrl(msg.key.participant || msg.key.remoteJid, 'image');
-    pfpBuffer = { url: pfpUrl };
-  } catch {
-    if (hasFallback) pfpBuffer = { url: 'file://' + fallbackImagePath };
-  }
-
-  // Compose ASCII fancy profile
-  const text = `
-╔════════════════════════════════╗
-║        🎭 𝗨𝗟𝗧𝗜𝗠𝗔𝗧𝗘 𝗣𝗥𝗢𝗙𝗜𝗟𝗘       ║
-╠════════════════════════════════╣
-║ 🆔 Internal ID: ${userId}
-║ 📞 Number: ${profile.number}
-║ 🏷️ Nickname: ${profile.nickname || '❌ None'}
-║ 🏷️ Name: ${profile.name || '❌ None'}
-║ 🎂 Age: ${profile.age || '❌ Unknown'}
-║ 📝 Bio: ${profile.bio || '❌ None'}
-╠════════════════════════════════╣
-║ 🧠 Memory Traits:
-${profile.memoryTraits.length ? profile.memoryTraits.map(t => '║ • ' + t).join('\n') : '║ • Nothing yet...'}
-╚════════════════════════════════╝
-${profile.memoryTraits.length
-    ? '💬 Zani thinks you are interesting enough to remember 😉'
-    : '💤 Zani hasn\'t formed an opinion yet...'}
-`;
-
-  try {
-    await sock.sendMessage(msg.key.remoteJid, {
-      image: pfpBuffer,
-      caption: text,
-      contextInfo: { mentionedJid: [msg.key.participant || msg.key.remoteJid] }
-    }, { quoted: msg });
-  } catch {
-    // Fallback to text-only if image fails
-    await sock.sendMessage(msg.key.remoteJid, { text }, { quoted: msg });
-  }
+function loadProfiles() {
+  return JSON.parse(fs.readFileSync(profilesFile, "utf8"));
 }
+
+function saveProfiles(data) {
+  fs.writeFileSync(profilesFile, JSON.stringify(data, null, 2));
+}
+
+export default {
+  name: "profile",
+  description: "View or set your profile info",
+  async execute(sock, msg, args) {
+    // ------------------ Extract IDs ------------------
+    const internalId = (msg.key.participant || msg.key.remoteJid).split("@")[0].replace(/\D/g, "");
+    const profiles = loadProfiles();
+
+    // ------------------ Set Profile ------------------
+    if (args[0] === "set") {
+      const field = args[1];
+      const value = args.slice(2).join(" ");
+      if (!field || !value) {
+        return sock.sendMessage(
+          msg.key.remoteJid,
+          { text: "Usage: .profile set <name|age|bio> <value>" },
+          { quoted: msg }
+        );
+      }
+
+      if (!profiles[internalId]) profiles[internalId] = { name: "", age: "", bio: "" };
+      profiles[internalId][field] = value;
+      saveProfiles(profiles);
+
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: `✅ ${field} updated to: ${value}` },
+        { quoted: msg }
+      );
+    }
+
+    // ------------------ Show Profile ------------------
+    if (!isRegistered(internalId)) {
+      return sock.sendMessage(
+        msg.key.remoteJid,
+        { text: "❌ You are not registered! Use: .register YOUR_NUMBER" },
+        { quoted: msg }
+      );
+    }
+
+    const realNumber = getRealNumber(internalId);
+    const userProfile = profiles[internalId] || { name: "Unknown", age: "N/A", bio: "No bio set" };
+
+    // Fetch PFP
+    let pfpUrl;
+    try {
+      pfpUrl = await sock.profilePictureUrl(msg.key.participant || msg.key.remoteJid, "image");
+    } catch {
+      try {
+        pfpUrl = await sock.profilePictureUrl(sock.user.id, "image"); // bot pfp fallback
+      } catch {
+        pfpUrl = null;
+      }
+    }
+
+    // ------------------ Styled ASCII Profile ------------------
+    const profileText = `
+=====================
+      👤 PROFILE
+=====================
+📛 ${userProfile.name || "Unknown"}
+🎂 ${userProfile.age || "N/A"}
+📝 ${userProfile.bio || "No bio set"}
+📱 +${realNumber}
+=====================
+    `.trim();
+
+    if (pfpUrl) {
+      await sock.sendMessage(
+        msg.key.remoteJid,
+        { image: { url: pfpUrl }, caption: profileText },
+        { quoted: msg }
+      );
+    } else {
+      await sock.sendMessage(msg.key.remoteJid, { text: profileText }, { quoted: msg });
+    }
+  },
+};
