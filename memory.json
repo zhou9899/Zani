@@ -1,199 +1,96 @@
 {
-  "lastCleaned": 1759054134907,
+  "lastCleaned": 1759212430364,
   "users": {
-    "253235986227401": {
-      "interactions": [
-        {
-          "message": "Wtf",
-          "timestamp": 1759041577778
-        },
-        {
-          "message": "🥲U r too affectionate to others",
-          "timestamp": 1759041602035
-        },
-        {
-          "message": "I see @267388138319975 do U know",
-          "timestamp": 1759041661352
-        },
-        {
-          "message": "I am Zhou",
-          "timestamp": 1759041676178
-        },
-        {
-          "message": "📨 Message from: 923440565387 Content: .wcg next                  🏷️ Group chat: true\nDictionary API error: TypeError: fetch failed                         at node:internal/deps/undici/undici:15445:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async checkWord (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:11:26)\n    at async Object.execute (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:150:23)\n    at async executeCommand (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:127:9)\n    at async EventEmitter.<anonymous> (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:194:9) {\n  [cause]: Error: getaddrinfo ENOTFOUND api.dictionaryapi.dev\n      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {                                                             errno: -3007,                                                     code: 'ENOTFOUND',                                                syscall: 'getaddrinfo',\n    hostname: 'api.dictionaryapi.dev'\n  }",
-          "timestamp": 1759055495229
-        },
-        {
-          "message": "Shush",
-          "timestamp": 1759055519437
-        },
-        {
-          "message": "Say I love you to Zani",
-          "timestamp": 1759055526634
-        },
-        {
-          "message": "@238487236255775",
-          "timestamp": 1759055681203
-        }
-      ],
-      "behavior_profile": [
-        "attempts greeting - barely polite",
-        "mediocre conversationalist - barely worth my attention",
-        "lazy communicator - wasting my time",
-        "mentions Zhou - knows better than to disrespect my husband",
-        "over-explainer - get to the point",
-        "uses vulgar language - needs discipline",
-        "short message",
-        "normal conversation",
-        "long message"
-      ],
-      "last_updated": 1759055681203
-    },
-    "93128144998629": {
-      "interactions": [
-        {
-          "message": "But it was really zhou",
-          "timestamp": 1759004893710
-        },
-        {
-          "message": "But it was really zhou",
-          "timestamp": 1759004894509
-        }
-      ],
-      "behavior_profile": [
-        "mentions Zhou - knows better than to disrespect my husband"
-      ],
-      "last_updated": 1759004894509
-    },
     "[object Object]": {
       "interactions": [
         {
-          "message": "I am Zhou",
-          "timestamp": 1759041674001
+          "message": "Zani",
+          "timestamp": 1759261299578
         },
         {
-          "message": "Sheesh 👀👀",
-          "timestamp": 1759041704718
+          "message": "Can't U recognise my number",
+          "timestamp": 1759261316686
         },
         {
-          "message": "📨 Message from: 923440565387 Content: .wcg next                  🏷️ Group chat: true\nDictionary API error: TypeError: fetch failed                         at node:internal/deps/undici/undici:15445:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async checkWord (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:11:26)\n    at async Object.execute (file:///data/data/com.termux/files/home/Zani/commands/wcg.js:150:23)\n    at async executeCommand (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:127:9)\n    at async EventEmitter.<anonymous> (file:///data/data/com.termux/files/home/Zani/handlers/messageHandler.js:194:9) {\n  [cause]: Error: getaddrinfo ENOTFOUND api.dictionaryapi.dev\n      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {                                                             errno: -3007,                                                     code: 'ENOTFOUND',                                                syscall: 'getaddrinfo',\n    hostname: 'api.dictionaryapi.dev'\n  }",
-          "timestamp": 1759055485221
+          "message": "Nice",
+          "timestamp": 1759261325515
         },
         {
-          "message": "Shush",
-          "timestamp": 1759055509434
+          "message": "Are we writing a dark romance book here is something zani??",
+          "timestamp": 1759261362364
         },
         {
-          "message": "Say I love you to Zani",
-          "timestamp": 1759055516630
+          "message": "It's my bot",
+          "timestamp": 1759261381487
         },
         {
-          "message": "I love you to Zani",
-          "timestamp": 1759055543984
+          "message": "Good so far wifey",
+          "timestamp": 1759261392993
         },
         {
-          "message": "I love you",
-          "timestamp": 1759055569065
-        },
-        {
-          "message": "@238487236255775",
-          "timestamp": 1759055671202
+          "message": "So fast",
+          "timestamp": 1759261509880
         }
       ],
       "behavior_profile": [
-        "lazy communicator - wasting my time",
-        "mediocre conversationalist - barely worth my attention",
         "short message",
         "normal conversation",
         "long message"
       ],
-      "last_updated": 1759055671202
+      "last_updated": 1759261509880
     },
-    "168775655620796": {
+    "120363403899976903": {
       "interactions": [
         {
-          "message": "zani",
-          "timestamp": 1759039133010
+          "message": "Zani",
+          "timestamp": 1759261300567
         }
       ],
       "behavior_profile": [
-        "lazy communicator - wasting my time"
+        "short message"
       ],
-      "last_updated": 1759039133010
+      "last_updated": 1759261300567
     },
-    "29000240001197": {
+    "253235986227401": {
       "interactions": [
         {
-          "message": "┌─❖\n│「 ⚠️ 𝗪𝗔𝗥𝗡𝗜𝗡𝗚 」\n└┬❖ 「 @923219576020 」\n   │✑  𝗥𝗘𝗔𝗦𝗢𝗡\n   │✑  Detected as a bot user. Device: web\n   │✑  𝗟𝗜𝗠𝗜𝗧\n   │✑  1/5\n   └────────────┈ ⳹",
-          "timestamp": 1759039154911
+          "message": "Can't U recognise my number",
+          "timestamp": 1759261317248
         },
         {
-          "message": "┌─❖\n│「 ⚠️ 𝗪𝗔𝗥𝗡𝗜𝗡𝗚 」\n└┬❖ 「 @923219576020 」\n   │✑  𝗥𝗘𝗔𝗦𝗢𝗡\n   │✑  Detected as a bot user. Device: web\n   │✑  𝗟𝗜𝗠𝗜𝗧\n   │✑  3/5\n   └────────────┈ ⳹",
-          "timestamp": 1759039161348
+          "message": "Nice",
+          "timestamp": 1759261326457
         },
         {
-          "message": "✅ Anti-Bot is now *off* for this group.",
-          "timestamp": 1759039166847
+          "message": "It's my bot",
+          "timestamp": 1759261382272
+        },
+        {
+          "message": "Good so far wifey",
+          "timestamp": 1759261393728
+        },
+        {
+          "message": "So fast",
+          "timestamp": 1759261510990
         }
       ],
       "behavior_profile": [
-        "over-explainer - get to the point",
-        "mediocre conversationalist - barely worth my attention"
+        "normal conversation",
+        "short message"
       ],
-      "last_updated": 1759039166847
+      "last_updated": 1759261510990
     },
-    "267388138319975": {
+    "85723805970621": {
       "interactions": [
         {
-          "message": "Uh okay",
-          "timestamp": 1759039738526
-        },
-        {
-          "message": "I am Zhou",
-          "timestamp": 1759041147833
-        },
-        {
-          "message": "Do U really think I am Zhou?",
-          "timestamp": 1759041166149
-        },
-        {
-          "message": "I am raizel",
-          "timestamp": 1759041206925
+          "message": "Are we writing a dark romance book here is something zani??",
+          "timestamp": 1759261363399
         }
       ],
       "behavior_profile": [
-        "mediocre conversationalist - barely worth my attention",
-        "normal conversation"
+        "long message"
       ],
-      "last_updated": 1759041206925
-    },
-    "923440565387": {
-      "interactions": [
-        {
-          "message": "Sheesh 👀👀",
-          "timestamp": 1759041706700
-        }
-      ],
-      "behavior_profile": [
-        "normal conversation"
-      ],
-      "last_updated": 1759041706700
-    },
-    "238487236255775": {
-      "interactions": [
-        {
-          "message": "I love you to Zani",
-          "timestamp": 1759055553987
-        },
-        {
-          "message": "I love you",
-          "timestamp": 1759055579068
-        }
-      ],
-      "behavior_profile": [
-        "normal conversation"
-      ],
-      "last_updated": 1759055579068
+      "last_updated": 1759261363399
     }
   }
 }

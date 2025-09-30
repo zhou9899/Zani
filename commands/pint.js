@@ -1,88 +1,69 @@
-import { pinterest } from 'ironman-api';
+import axios from 'axios';
 
-export default {
-  name: 'pint',
-  category: 'search',
-  description: 'Search Pinterest images using ironman-api',
-  
-  async execute(m, { conn, text }) {
-    // Safety checks
-    if (!m) return console.error('Message object "m" is undefined');
-    if (!conn) return console.error('Connection object "conn" is undefined');
+export const name = "pint";
+export const description = "Search and download Pinterest images";
+export const usage = ".pint <search query> | .pint cats 5";
 
+export async function execute(sock, msg, args) {
     try {
-      if (!text) {
-        return await conn.sendMessage(
-          m.chat,
-          { text: '❌ Please provide a search query!\nExample: .pint wedding decorations' },
-          { quoted: m }
-        );
-      }
-
-      await conn.sendMessage(m.chat, { text: '⏳ Searching Pinterest...' }, { quoted: m });
-
-      const results = await pinterest(text);
-
-      if (!results || results.length === 0) {
-        return await conn.sendMessage(
-          m.chat,
-          { text: `❌ No Pinterest results found for "${text}"` },
-          { quoted: m }
-        );
-      }
-
-      const pinsToSend = results.slice(0, 5);
-
-      for (let i = 0; i < pinsToSend.length; i++) {
-        const pin = pinsToSend[i];
-        const caption = `*${i + 1}. ${pin.title || 'Pinterest Pin'}*\n🔗 ${pin.url || pin.link || 'Link not available'}`;
-
-        try {
-          if (pin.image || pin.img) {
-            await conn.sendMessage(
-              m.chat,
-              { image: { url: pin.image || pin.img }, caption },
-              { quoted: m }
-            );
-          } else {
-            // If image is missing, send as text
-            await conn.sendMessage(
-              m.chat,
-              { text: caption },
-              { quoted: m }
-            );
-          }
-
-          // Delay to avoid rate-limiting
-          if (i < pinsToSend.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-
-        } catch (err) {
-          console.error(`Error sending pin ${i + 1}:`, err);
-          await conn.sendMessage(
-            m.chat,
-            { text: `*${i + 1}. ${pin.title || 'Pinterest Pin'}*\n🔗 ${pin.url || pin.link || 'Link not available'}` },
-            { quoted: m }
-          );
+        if (!args.length) {
+            return await sock.sendMessage(msg.key.remoteJid, {
+                text: `📌 *Pinterest Search*\n\nUsage: ${usage}\nExamples:\n• .pint cats\n• .pint dogs 3\n• .pint aesthetic 5`
+            }, { quoted: msg });
         }
-      }
 
-      await conn.sendMessage(
-        m.chat,
-        { text: `✅ Found ${results.length} Pinterest results for "${text}"` },
-        { quoted: m }
-      );
+        let searchQuery = args.join(' ');
+        let count = 4;
+        
+        const lastArg = args[args.length - 1];
+        if (!isNaN(lastArg) && lastArg > 0 && lastArg <= 8) {
+            count = parseInt(lastArg);
+            searchQuery = args.slice(0, -1).join(' ');
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `🔍 *Searching Pinterest...*\n\n📝 Query: *${searchQuery}*\n📸 Images: ${count}\n\n⏳ Please wait...`
+        }, { quoted: msg });
+
+        // Use Pure Pinterest API
+        const response = await axios.get(
+            `http://localhost:3000/api/pinterest?search=${encodeURIComponent(searchQuery)}&limit=${count}`,
+            { timeout: 20000 }
+        );
+        
+        if (!response.data.images || response.data.images.length === 0) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: `❌ No Pinterest images found for "${searchQuery}"`
+            }, { quoted: msg });
+            return;
+        }
+
+        // Send Pinterest images
+        let sentCount = 0;
+        for (let i = 0; i < response.data.images.length; i++) {
+            try {
+                await sock.sendMessage(msg.key.remoteJid, {
+                    image: { url: response.data.images[i].url },
+                    caption: `📌 ${response.data.images[i].title}\n\n🖼️ ${i + 1}/${response.data.images.length}\n🔗 Source: ${response.data.images[i].source}`
+                });
+                sentCount++;
+                
+                if (i < response.data.images.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            } catch (error) {
+                console.log(`Failed to send image ${i + 1}:`, error.message);
+            }
+        }
+
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `✅ *Pinterest Search Complete!*\n\n📝 Query: *${searchQuery}*\n📸 Sent: ${sentCount} Pinterest images`
+        });
 
     } catch (error) {
-      console.error('Pinterest command error:', error);
-      if (conn && m.chat) {
-        await conn.sendMessage(
-          m.chat,
-          { text: '❌ Error searching Pinterest. Please try again later.' },
-          { quoted: m }
-        );
-      }
+        console.error("Pint command error:", error.message);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: `❌ *Pinterest Search Failed!*\n\nError: ${error.message}`
+        }, { quoted: msg });
     }
-  }
-};	
+}
