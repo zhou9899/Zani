@@ -1,0 +1,32 @@
+name: Run WhatsApp Bot
+
+on:
+  workflow_dispatch:           # Manual run
+  schedule:
+    - cron: "0 */6 * * *"      # Auto restart every 6 hours
+  push:
+    branches:
+      - main                   # Run whenever code is pushed to main
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: 🧩 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧠 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🚀 Start WhatsApp Bot
+        run: node index.js
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
