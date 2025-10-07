@@ -1,3 +1,4 @@
+
 // handlers/messageHandler.js - Fixed WCG validation and turn management
 import {
   getAIResponse,
@@ -566,6 +567,7 @@ export async function handleAI(sock, msg, text, sender, senderNumber, isGroup, c
       isZhou: isZhou,
     };
 
+        
     console.log("🤖 Calling getAIResponse with chatId:", chatId);
     const aiResponse = await getAIResponse(text, profile, isZhou, chatId);
     helpers.storeMessageHistory(msg.key.remoteJid, sender, text);
@@ -574,7 +576,7 @@ export async function handleAI(sock, msg, text, sender, senderNumber, isGroup, c
     await sock.sendMessage(
       msg.key.remoteJid,
       { text: aiResponse.text },
-         { quoted: msg }
+      { quoted: msg }
     );
 
     console.log("🎨 Checking for sticker to send...");
@@ -589,10 +591,7 @@ export async function handleAI(sock, msg, text, sender, senderNumber, isGroup, c
         console.log("❌ Failed to send sticker");
       }
     } else {
-      console.log("❌ No sticker to send - reasons:");
-      console.log("   - sendSticker:", aiResponse.sticker?.sendSticker);
-      console.log("   - path exists:", !!aiResponse.sticker?.path);
-      console.log("   - sticker object:", aiResponse.sticker);
+      console.log("❌ No sticker to send");
     }
 
   } catch (err) {
@@ -655,7 +654,7 @@ export function handleMessages(sock) {
           if (handled) continue;
         }
 
-        // STEP 2: Check for prefix-less commands (trivia, ttt, wcg, etc.)
+        // STEP 2: Check for prefix-less commands
         const firstWord = text.split(/ +/)[0].toLowerCase();
         if (global.commands[firstWord]) {
           console.log(`🎮 Prefix-less command detected: ${firstWord}`);
@@ -677,7 +676,7 @@ export function handleMessages(sock) {
           continue;
         }
 
-        // STEP 4: Finally check for AI trigger (WITH CHAT STATUS CHECK)
+        // STEP 4: Finally check for AI trigger
         const contextInfo = msg.message?.extendedTextMessage?.contextInfo || {};
         if (helpers.shouldTriggerAI(text, contextInfo, isGroup, botNumber, sock, chatId)) {
           await handleAI(sock, msg, text, sender, senderNumber, isGroup, contextInfo, chatId);
@@ -693,3 +692,4 @@ export function handleMessages(sock) {
 }
 
 export const _testHelpers = helpers;
+

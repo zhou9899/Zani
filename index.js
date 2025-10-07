@@ -1,16 +1,77 @@
 // ============================================
-// index.js — WhatsApp Bot (Git + Termux Session)
+// index.js — Zani Bot (Stable, Auto-Healing)
 // ============================================
 
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, jidDecode } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
+import {
+  makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  Browsers,
+} from "@whiskeysockets/baileys";
+import https from "https";
+import axios from "axios";
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ==================== CLEAN ENV ====================
+[
+  "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
+  "http_proxy", "https_proxy", "all_proxy",
+  "NODE_TLS_REJECT_UNAUTHORIZED",
+].forEach(v => {
+  process.env[v] = "";
+  delete process.env[v];
+});
+
+// ==================== SECURE AXIOS ====================
+const secureAxios = axios.create({
+  proxy: false,
+  timeout: 60000,
+  maxRedirects: 5,
+  httpsAgent: new https.Agent({ keepAlive: true, rejectUnauthorized: true }),
+  headers: {
+    "User-Agent": "WhatsApp/2.24.10.81 Android/13 Device/Samsung-S22",
+    "Origin": "https://web.whatsapp.com",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+  },
+});
+global.axios = secureAxios;
+
+// ==================== GLOBAL CONFIG ====================
+const ownersFile = path.join(__dirname, "owners.json");
+const modsFile = path.join(__dirname, "moderators.json");
+
+global.owners = fs.existsSync(ownersFile)
+  ? JSON.parse(fs.readFileSync(ownersFile, "utf8"))
+  : [];
+
+global.moderators = fs.existsSync(modsFile)
+  ? JSON.parse(fs.readFileSync(modsFile, "utf8"))
+  : [];
+
+// Watch for updates
+[ownersFile, modsFile].forEach(file => {
+  if (fs.existsSync(file)) {
+    fs.watchFile(file, { interval: 5000 }, () => {
+      try {
+        global[file.includes("owners") ? "owners" : "moderators"] =
+          JSON.parse(fs.readFileSync(file, "utf8"));
+        console.log(`🔄 ${path.basename(file)} updated`);
+      } catch (err) {
+        console.error(`❌ Failed to update ${file}: ${err.message}`);
+      }
+    });
+  }
+});
 
 // ==================== BOT LOCK ====================
 const LOCK_FILE = path.join(__dirname, "bot.lock");
@@ -31,7 +92,7 @@ if (fs.existsSync(LOCK_FILE)) {
 }
 fs.writeFileSync(LOCK_FILE, process.pid.toString());
 
-// ==================== CLEANUP ====================
+// ==================== CLEANUP & SHUTDOWN ====================
 const cleanup = () => {
   if (fs.existsSync(LOCK_FILE) && parseInt(fs.readFileSync(LOCK_FILE, "utf8")) === process.pid) {
     fs.unlinkSync(LOCK_FILE);
@@ -64,41 +125,41 @@ async function startBot() {
   console.log("🚀 Connecting to WhatsApp...");
 
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, "auth_info"));
+    const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
+
+    // --- Silence noisy Baileys logs ---
+    const originalLog = console.log;
+    const ignoredPatterns = [
+      "Closing stale open session",
+      "Closing session:",
+      "uploading pre-keys",
+      "pre-key",
+      "0 pre-keys found on server",
+    ];
+    console.log = (...args) => {
+      const msg = args.join(" ");
+      if (ignoredPatterns.some(p => msg.includes(p))) return;
+      originalLog(...args);
+    };
 
     const sock = makeWASocket({
       auth: state,
       browser: Browsers.windows("Chrome"),
       markOnlineOnConnect: false,
       syncFullHistory: false,
+      generateHighQualityLinkPreview: false,
       printQRInTerminal: false,
-      keepAliveIntervalMs: 25000,
       connectTimeoutMs: 45000,
-      maxRetries: 3
+      keepAliveIntervalMs: 25000,
+      maxRetries: 3,
+      qrTimeout: 60000,
+      fetchOptions: { axiosInstance: secureAxios, timeout: 60000 },
     });
 
     currentSocket = sock;
     sock.ev.on("creds.update", saveCreds);
 
-    // --- Safe sendMessage wrapper ---
-    const originalSendMessage = sock.sendMessage.bind(sock);
-    sock.sendMessage = async (jid, message, ...args) => {
-      try {
-        if (!jid || typeof jid !== "string") {
-          console.warn("⚠️ Invalid JID:", jid);
-          return;
-        }
-        const decoded = jidDecode(jid);
-        if (!decoded?.user) {
-          console.warn("⚠️ JID decode failed:", jid);
-          return;
-        }
-        return await originalSendMessage(jid, message, ...args);
-      } catch (err) {
-        console.error("❌ sendMessage error:", err.message);
-      }
-    };
-
+    // --- Auto-refresh missing sessions (fix decryption issues) ---
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) {
         qrcodeTerminal.generate(qr, { small: true });
@@ -109,7 +170,10 @@ async function startBot() {
         console.log("✅ Connected!");
         isConnecting = false;
 
-        try { await sock.sendPresenceUpdate("available"); } catch {}
+        // Heal missing sessions
+        try {
+          await sock.sendPresenceUpdate("available");
+        } catch { /* ignore */ }
 
         const [{ loadCommands }, { handleMessages }] = await Promise.all([
           import("./handlers/commandLoader.js"),
@@ -126,8 +190,7 @@ async function startBot() {
         const code = lastDisconnect?.error?.output?.statusCode;
         console.log(`❌ Connection closed. Code: ${code || "unknown"}`);
         if (code === DisconnectReason.loggedOut)
-          fs.rmSync(path.join(__dirname, "auth_info"), { recursive: true, force: true });
-
+          fs.rmSync("./auth_info", { recursive: true, force: true });
         if (!isShuttingDown)
           setTimeout(startBot, code === DisconnectReason.loggedOut ? 3000 : 10000);
       }
@@ -143,7 +206,7 @@ async function startBot() {
 }
 
 // ==================== INITIALIZE ====================
-console.log("🤖 WhatsApp Bot Starting...");
+console.log("🤖 Zani Bot — Fast & Secure");
 startBot();
 
 // ==================== AUTO-RESTART ====================
@@ -153,3 +216,4 @@ setInterval(() => {
     currentSocket.ws.close();
   }
 }, 6 * 60 * 60 * 1000); // every 6 hours
+
