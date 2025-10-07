@@ -56,10 +56,6 @@
     "267388138319975": {
       "interactions": [
         {
-          "message": "Shush I wanna deploy it on digitalocean how to do it",
-          "timestamp": 1759868544363
-        },
-        {
           "message": "I said help me in it",
           "timestamp": 1759868633411
         },
@@ -86,6 +82,10 @@
         {
           "message": "No aws full form",
           "timestamp": 1759868768624
+        },
+        {
+          "message": "Hmm",
+          "timestamp": 1759873360293
         }
       ],
       "behavior_profile": [
@@ -96,7 +96,7 @@
         "normal conversation",
         "uses vulgar language"
       ],
-      "last_updated": 1759868768624,
+      "last_updated": 1759873360293,
       "lastMood": "romantic"
     },
     "undefined": {
