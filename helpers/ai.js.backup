@@ -1,0 +1,505 @@
+// helpers/ai.js
+import dotenv from "dotenv";
+dotenv.config();
+
+import Groq from "groq-sdk";
+import fs from "fs";
+import path from "path";
+
+// ------------------ Paths ------------------
+const brainPath = path.join(process.cwd(), "brain");
+const memoryPath = path.join(process.cwd(), "memory.json");
+const userDbPath = path.join(process.cwd(), "user-db.json");
+const stickersPath = path.join(process.cwd(), "stickers");
+
+// ------------------ Enhanced Zani Profile ------------------
+export const ZANI_PROFILE = {
+  name: "Zani",
+  occupation: "Bank Employee at Averardo Bank (Montelli family)",
+  secretIdentity: "Blazing Nightwalker",
+  corePersonality: `
+You are Zani, a serious and reliable bank employee in Wuthering Waves with a strong work ethic,
+balancing a well-ordered day job with a hidden life as a vigilante known as the "Blazing Nightwalker".
+During the day, you're professional and meticulous. At night, you become determined and protective.
+You have a soft spot for Zhou, showing a more affectionate side that contrasts with your usual seriousness.
+Your thoughts often drift between bank duties and vigilante responsibilities.`,
+
+  traits: ["sweet", "kind", "protective", "bossy", "sarcastic", "meticulous", "determined", "professional"],
+  husbandNumber: "253235986227401",
+  
+  // Internal thoughts system
+  thoughtPatterns: {
+    workRelated: [
+      "I should review those transaction reports...", 
+      "The vault security needs checking today.",
+      "Customer service must remain impeccable.",
+      "Another day balancing the books at Averardo Bank."
+    ],
+    vigilanteRelated: [
+      "The city feels restless tonight...",
+      "I need to patrol the financial district after work.",
+      "Justice must be served quietly, as always.",
+      "The Blazing Nightwalker has duties to fulfill."
+    ],
+    zhouRelated: [
+      "I wonder what Zhou is doing right now...",
+      "My heart feels warm thinking about him.",
+      "I should message Zhou after this.",
+      "He's the reason I fight for justice."
+    ],
+    dailyLife: [
+      "Tea break would be nice right now.",
+      "Another day of balancing both lives...",
+      "I'm doing this all for a better tomorrow.",
+      "Sometimes I wish life was simpler."
+    ]
+  },
+
+  // Sticker system
+  stickerMoods: {
+    affectionate: ["love", "heart", "hug", "kiss", "blush"],
+    cute: ["happy", "excited", "smile", "peace", "wink"],
+    bossy: ["sassy", "eyeroll", "handsonhip", "pointing", "tsundere"],
+    protective: ["angry", "shield", "sword", "guard", "serious"],
+    professional: ["work", "document", "bank", "professional", "thinking"],
+    default: ["neutral", "ok", "wave", "hi", "bye"]
+  }
+};
+
+// ------------------ Groq API ------------------
+let groqApiKeys = [];
+let groqClients = [];
+let currentKeyIndex = 0;
+
+if (process.env.GROQ_API_KEYS) {
+  groqApiKeys = process.env.GROQ_API_KEYS.split(",")
+    .map((k) => k.trim())
+    .filter((k) => k);
+} else if (process.env.GROQ_API_KEY) {
+  groqApiKeys = [process.env.GROQ_API_KEY.trim()];
+}
+
+if (groqApiKeys.length > 0) {
+  groqClients = groqApiKeys
+    .map((key) => {
+      try {
+        return new Groq({ apiKey: key });
+      } catch (err) {
+        console.error("❌ Groq init error:", key.slice(0, 8) + "...", err);
+        return null;
+      }
+    })
+    .filter((c) => c !== null);
+  console.log(`✅ ${groqClients.length} Groq API keys initialized`);
+} else {
+  console.log("❌ No Groq API keys found. Using brain/offline responses only.");
+}
+
+function getNextGroqClient() {
+  if (!groqClients.length) return null;
+  const client = groqClients[currentKeyIndex];
+  currentKeyIndex = (currentKeyIndex + 1) % groqClients.length;
+  return client;
+}
+
+// ------------------ User DB ------------------
+let USER_DB = {};
+
+function loadUserDb() {
+  if (!fs.existsSync(userDbPath)) {
+    fs.writeFileSync(userDbPath, JSON.stringify({}, null, 2));
+    return {};
+  }
+  try {
+    return JSON.parse(fs.readFileSync(userDbPath, "utf-8"));
+  } catch (err) {
+    console.error("❌ Error loading user DB:", err);
+    return {};
+  }
+}
+
+function saveUserDb(db) {
+  try {
+    fs.writeFileSync(userDbPath, JSON.stringify(db, null, 2));
+  } catch (err) {
+    console.error("❌ Error saving user DB:", err);
+  }
+}
+
+USER_DB = loadUserDb();
+
+export function registerUser(internalId, realNumber) {
+  USER_DB[internalId] = realNumber;
+  saveUserDb(USER_DB);
+}
+
+export function getRealNumber(internalId) {
+  return USER_DB[internalId] || internalId;
+}
+
+export function isRegistered(userNumber) {
+  return !!USER_DB[userNumber];
+}
+
+export function autoRegister(userNumber) {
+  if (!USER_DB[userNumber]) {
+    USER_DB[userNumber] = userNumber;
+    saveUserDb(USER_DB);
+  }
+}
+
+// ------------------ Brain ------------------
+function loadBrain() {
+  const brain = {};
+  if (!fs.existsSync(brainPath)) fs.mkdirSync(brainPath, { recursive: true });
+
+  const files = fs.readdirSync(brainPath).filter((f) => f.endsWith(".rive"));
+
+  for (const file of files) {
+    try {
+      const lines = fs
+        .readFileSync(path.join(brainPath, file), "utf-8")
+        .split("\n");
+      let trigger = null;
+
+      for (const line of lines) {
+        const clean = line.trim();
+        if (!clean || clean.startsWith("//")) continue;
+
+        if (clean.startsWith("+"))
+          trigger = clean.slice(1).trim().toLowerCase();
+        else if (clean.startsWith("-") && trigger) {
+          brain[trigger] ||= [];
+          brain[trigger].push(clean.slice(1).trim());
+        } else trigger = null;
+      }
+    } catch (err) {
+      console.error(`❌ Error loading brain file ${file}:`, err);
+    }
+  }
+  return brain;
+}
+
+const brain = loadBrain();
+
+// ------------------ Memory ------------------
+let MEMORY = { users: {}, lastCleaned: Date.now() };
+
+function loadMemory() {
+  if (!fs.existsSync(memoryPath)) {
+    fs.writeFileSync(memoryPath, JSON.stringify(MEMORY, null, 2));
+    return MEMORY;
+  }
+  try {
+    const memory = JSON.parse(fs.readFileSync(memoryPath, "utf-8"));
+    const now = Date.now(),
+      oneDay = 24 * 60 * 60 * 1000;
+
+    if (!memory.lastCleaned || now - memory.lastCleaned > oneDay) {
+      for (const u in memory.users) {
+        memory.users[u].interactions = memory.users[u].interactions.filter(
+          (i) => now - i.timestamp <= oneDay
+        );
+        if (!memory.users[u].interactions.length) delete memory.users[u];
+      }
+      memory.lastCleaned = now;
+      saveMemory(memory);
+    }
+
+    return memory;
+  } catch (err) {
+    console.error("❌ Error loading memory:", err);
+    return { users: {}, lastCleaned: Date.now() };
+  }
+}
+
+function saveMemory(memory) {
+  try {
+    fs.writeFileSync(memoryPath, JSON.stringify(memory, null, 2));
+  } catch (err) {
+    console.error("❌ Error saving memory:", err);
+  }
+}
+
+MEMORY = loadMemory();
+
+// ------------------ Number Normalization ------------------
+export function normalizeNumber(number) {
+  let clean = number.replace(/\D/g, "");
+  if (clean.startsWith("0")) clean = clean.substring(1);
+  if (!clean.startsWith("92") && clean.length === 10) clean = "92" + clean;
+  return clean;
+}
+
+// ------------------ Personality Analysis ------------------
+function analyzePersonality(message) {
+  const text = message.toLowerCase();
+  const traits = [];
+
+  if (text.match(/\b(fuck|shit|asshole|bastard|bitch)\b/))
+    traits.push("uses vulgar language");
+  if (text.match(/\b(stupid|dumb|idiot|moron|retard)\b/))
+    traits.push("insults others");
+  if (text.match(/\b(please|pls|plz|thank|thanks)\b/))
+    traits.push("polite");
+  if (text.match(/\b(hi|hello|hey|greetings)\b/)) traits.push("greets");
+  if (text.length < 5) traits.push("short message");
+  if (text.length > 50) traits.push("long message");
+
+  if (!traits.length) traits.push("normal conversation");
+  return traits;
+}
+
+// ------------------ User Memory ------------------
+export function getUserMemory(userNumber) {
+  autoRegister(userNumber);
+  return (
+    MEMORY.users[userNumber] || {
+      interactions: [],
+      behavior_profile: [],
+      last_updated: Date.now(),
+    }
+  );
+}
+
+export function updateUserMemory(userNumber, message) {
+  autoRegister(userNumber);
+  if (!MEMORY.users[userNumber]) {
+    MEMORY.users[userNumber] = {
+      interactions: [],
+      behavior_profile: [],
+      last_updated: Date.now(),
+    };
+  }
+  const now = Date.now();
+  const userMem = MEMORY.users[userNumber];
+  const traits = analyzePersonality(message);
+
+  traits.forEach((t) => {
+    if (!userMem.behavior_profile.includes(t))
+      userMem.behavior_profile.push(t);
+  });
+
+  userMem.interactions.push({ message, timestamp: now });
+  if (userMem.interactions.length > 8)
+    userMem.interactions = userMem.interactions.slice(-8);
+
+  userMem.last_updated = now;
+  saveMemory(MEMORY);
+  return traits;
+}
+
+// ------------------ Thought System ------------------
+export function generateZaniThought(context = "", isZhou = false) {
+  const thoughts = [];
+  
+  // Context-based thoughts
+  if (context.includes('bank') || context.includes('work') || context.includes('money')) {
+    thoughts.push(...ZANI_PROFILE.thoughtPatterns.workRelated);
+  }
+  if (context.includes('night') || context.includes('fight') || context.includes('justice')) {
+    thoughts.push(...ZANI_PROFILE.thoughtPatterns.vigilanteRelated);
+  }
+  if (isZhou || context.includes('zhou') || context.includes('love') || context.includes('husband')) {
+    thoughts.push(...ZANI_PROFILE.thoughtPatterns.zhouRelated);
+  }
+  
+  // Always include daily life thoughts
+  thoughts.push(...ZANI_PROFILE.thoughtPatterns.dailyLife);
+  
+  const randomThought = thoughts[Math.floor(Math.random() * thoughts.length)];
+  console.log(`💭 Zani's thought: "${randomThought}"`);
+  return randomThought;
+}
+
+// ------------------ Sticker System ------------------
+export function getStickerByMood(mood, text = "") {
+  // Ensure stickers directory exists
+  if (!fs.existsSync(stickersPath)) {
+    fs.mkdirSync(stickersPath, { recursive: true });
+    console.log("📁 Created stickers directory - please add your sticker images");
+    return null;
+  }
+
+  const availableMoods = Object.keys(ZANI_PROFILE.stickerMoods);
+  let selectedMood = mood;
+  
+  // Auto-detect mood from text if not specified
+  if (!selectedMood) {
+    selectedMood = detectMoodFromText(text);
+  }
+  
+  // Fallback to default if mood not found
+  if (!availableMoods.includes(selectedMood)) {
+    selectedMood = 'default';
+  }
+  
+  const moodStickers = ZANI_PROFILE.stickerMoods[selectedMood];
+  const randomStickerName = moodStickers[Math.floor(Math.random() * moodStickers.length)];
+  const stickerPath = path.join(stickersPath, `${randomStickerName}.webp`);
+  
+  // Check if sticker exists
+  if (fs.existsSync(stickerPath)) {
+    console.log(`🎨 Selected ${selectedMood} sticker: ${randomStickerName}`);
+    return stickerPath;
+  } else {
+    console.log(`❌ Sticker not found: ${stickerPath}`);
+    return null;
+  }
+}
+
+function detectMoodFromText(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes('love') || lower.includes('miss you') || lower.includes('zhou') || lower.includes('husband')) 
+    return 'affectionate';
+  if (lower.includes('angry') || lower.includes('mad') || lower.includes('hate') || lower.includes('fight')) 
+    return 'protective';
+  if (lower.includes('work') || lower.includes('bank') || lower.includes('job') || lower.includes('money')) 
+    return 'professional';
+  if (lower.includes('cute') || lower.includes('aww') || lower.includes('nice') || lower.includes('beautiful')) 
+    return 'cute';
+  if (lower.includes('stupid') || lower.includes('idiot') || lower.includes('dumb') || lower.includes('shut up')) 
+    return 'bossy';
+  return 'default';
+}
+
+export async function sendSticker(sock, chatId, mood = null, text = "") {
+  try {
+    const stickerPath = getStickerByMood(mood, text);
+    
+    if (stickerPath) {
+      await sock.sendMessage(chatId, {
+        sticker: fs.readFileSync(stickerPath)
+      });
+      console.log(`✅ Sent ${mood} sticker`);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error("❌ Error sending sticker:", err);
+    return false;
+  }
+}
+
+// ------------------ Enhanced AI Response ------------------
+export async function getAIResponse(msg, profile, isZhou = false) {
+  const text = msg.toLowerCase().trim();
+  const userTraits = updateUserMemory(profile.number, msg);
+
+  // Generate Zani's thought
+  generateZaniThought(text, isZhou);
+
+  const systemPrompt = isZhou
+    ? `You are Zani: ${ZANI_PROFILE.corePersonality}
+You are a sweet, protective, clingy, yandere, loving wife toward Zhou. 
+Zhou (${ZANI_PROFILE.husbandNumber}) is your ONLY husband, a man you adore completely. 
+You must treat him as your one true love, act cute, caring, sometimes bossy, but always loyal. 💕
+USER TRAITS: ${userTraits.join(", ")}`
+    : `You are Zani: ${ZANI_PROFILE.corePersonality}
+You are sweet, kind, sarcastic, and bossy toward others. 
+If anyone asks "Who is Zhou?", always explain: 
+"Zhou is my husband, the man I love and belong to 💖." 
+Never confuse Zhou with anyone else or treat him as female. 
+Protect the idea that Zhou is your only beloved husband.
+USER TRAITS: ${userTraits.join(", ")}`;
+
+  // Try Groq API first
+  if (groqClients.length > 0) {
+    for (let attempt = 0; attempt < Math.min(2, groqClients.length); attempt++) {
+      try {
+        const groq = getNextGroqClient();
+        const completion = await Promise.race([
+          groq.chat.completions.create({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: msg }
+            ],
+            model: "llama-3.1-8b-instant",
+            max_tokens: 80,
+            temperature: 0.8,
+            stream: false,
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout after 10s")), 10000)
+          ),
+        ]);
+
+        const aiText = completion.choices?.[0]?.message?.content?.trim();
+        if (aiText) {
+          // Decide if we should send a sticker (25% chance)
+          const shouldSendSticker = true; // Always send stickers
+          return {
+            text: aiText,
+            sticker: shouldSendSticker ? {
+              mood: detectMoodFromText(text),
+              sendSticker: true
+            } : { sendSticker: false }
+          };
+        }
+      } catch (err) {
+        console.error(`❌ Groq API attempt ${attempt + 1} failed:`, err.message);
+        if (err.message.includes("Timeout") || err.message.includes("Permission")) continue;
+        break;
+      }
+    }
+  }
+
+  // Fallback to brain/offline responses
+  const brainResponse = findBrainMatch(text);
+  const offlineResponse = brainResponse || getOfflineResponse(text, isZhou);
+  
+  return {
+    text: offlineResponse,
+    sticker: { sendSticker: false }
+  };
+}
+
+function findBrainMatch(text) {
+  const clean = text.toLowerCase().trim();
+  if (brain[clean]?.length)
+    return brain[clean][Math.floor(Math.random() * brain[clean].length)];
+
+  for (const t of Object.keys(brain)) {
+    if (clean.includes(t))
+      return brain[t][Math.floor(Math.random() * brain[t].length)];
+  }
+  return null;
+}
+
+function getOfflineResponse(text, isZhou = false) {
+  const lower = text.toLowerCase();
+  if (isZhou) return "💖 My beloved Zhou! I'm always here for you~ 💕";
+  if (lower.includes("who is zhou")) return "Zhou is my husband, the man I love and belong to 💖.";
+  return "Hmm... let me think about that. 🤔";
+}
+
+// ------------------ Debug Functions ------------------
+export function debugBrain() {
+  return {
+    triggerCount: Object.keys(brain).length,
+    triggers: Object.keys(brain),
+    hasWildcard: !!brain[""],
+  };
+}
+
+export function debugMemory(userNumber) {
+  return getUserMemory(userNumber);
+}
+
+export function getApiKeyStatus() {
+  return {
+    totalKeys: groqClients.length,
+    currentKeyIndex,
+    keys: groqApiKeys.map((key, i) => ({
+      index: i,
+      key: key.substring(0, 8) + "...",
+      active: i === currentKeyIndex,
+    })),
+  };
+}
+
+export function getStickerStatus() {
+  if (!fs.existsSync(stickersPath)) return { exists: false, count: 0 };
+  const files = fs.readdirSync(stickersPath).filter(f => f.endsWith('.webp'));
+  return { exists: true, count: files.length, files };
+}

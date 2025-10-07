@@ -1,0 +1,17 @@
+# Node modules (we install dependencies on Android)
+node_modules/
+
+# Environment files
+.env
+
+# Authentication/session info
+auth_info/
+
+# Local lock files
+bot.lock
+
+# Large media files
+*.mp4
+*.mov
+*.avi
+*.log
