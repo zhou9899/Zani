@@ -3,12 +3,11 @@ name: Run Zani Bot
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  bot:
+  start-bot:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,24 +17,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 24
-          cache: "npm"
+          node-version: '20' # Node 20 works with your bot
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Install localtunnel globally
-        run: npm install -g localtunnel
-
-      - name: Verify Environment Variables
         run: |
-          echo "GROQ_API_KEY loaded? $GROQ_API_KEY"
-          echo "WHATSAPP_ENV loaded? $WHATSAPP_ENV"
+          npm install -g localtunnel
+          npm ci
 
-      - name: Start Bot
+      - name: Verify Groq API Key
+        run: echo "Using Groq Key: $GROQ_API_KEY"
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
-        run: |
-          echo "Starting Zani Bot..."
-          node index.js
+
+      - name: Run Zani Bot
+        run: node index.js
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WHATSAPP_ENV: production

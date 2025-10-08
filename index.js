@@ -7,23 +7,18 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import qrcodeTerminal from "qrcode-terminal";
-import { makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } from "@whiskeysockets/baileys";
+import {
+  makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  Browsers,
+} from "@whiskeysockets/baileys";
 import https from "https";
 import axios from "axios";
-import groq from "groq-sdk"; // ✅ Correct import for Groq SDK
+import { Groq } from "groq-sdk";
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// ==================== CLEAN ENV ====================
-[
-  "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY",
-  "http_proxy", "https_proxy", "all_proxy",
-  "NODE_TLS_REJECT_UNAUTHORIZED",
-].forEach(v => {
-  process.env[v] = "";
-  delete process.env[v];
-});
 
 // ==================== SECURE AXIOS ====================
 const secureAxios = axios.create({
@@ -43,30 +38,10 @@ const secureAxios = axios.create({
 global.axios = secureAxios;
 
 // ==================== GROQ CLIENT ====================
-export const groqClient = groq({
-  apiKey: process.env.GROQ_API_KEY || "",
+export const groqClient = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
 });
-
-// ==================== GLOBAL CONFIG ====================
-const ownersFile = path.join(__dirname, "owners.json");
-const modsFile = path.join(__dirname, "moderators.json");
-
-global.owners = fs.existsSync(ownersFile) ? JSON.parse(fs.readFileSync(ownersFile, "utf8")) : [];
-global.moderators = fs.existsSync(modsFile) ? JSON.parse(fs.readFileSync(modsFile, "utf8")) : [];
-
-// Watch for updates
-[ownersFile, modsFile].forEach(file => {
-  if (fs.existsSync(file)) {
-    fs.watchFile(file, { interval: 5000 }, () => {
-      try {
-        global[file.includes("owners") ? "owners" : "moderators"] = JSON.parse(fs.readFileSync(file, "utf8"));
-        console.log(`🔄 ${path.basename(file)} updated`);
-      } catch (err) {
-        console.error(`❌ Failed to update ${file}: ${err.message}`);
-      }
-    });
-  }
-});
+console.log("✅ Groq Client initialized");
 
 // ==================== BOT LOCK ====================
 const LOCK_FILE = path.join(__dirname, "bot.lock");
@@ -132,7 +107,6 @@ async function startBot() {
       connectTimeoutMs: 45000,
       keepAliveIntervalMs: 25000,
       maxRetries: 3,
-      qrTimeout: 60000,
       fetchOptions: { axiosInstance: secureAxios, timeout: 60000 },
     });
 
@@ -149,11 +123,11 @@ async function startBot() {
         console.log("✅ Connected!");
         isConnecting = false;
 
-        // Load commands & message handler
         const [{ loadCommands }, { handleMessages }] = await Promise.all([
           import("./handlers/commandLoader.js"),
           import("./handlers/messageHandler.js"),
         ]);
+
         await loadCommands(sock, path.join(__dirname, "commands"));
         handleMessages(sock);
         console.log("🎉 Bot ready!");
