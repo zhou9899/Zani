@@ -1,43 +1,56 @@
 name: Run WhatsApp Bot
 
+# Trigger only on push to main
 on:
   push:
     branches:
       - main
+
+# Cancel any previous run of this workflow
+concurrency:
+  group: whatsapp-bot
+  cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout the repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ Setup Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm install
 
+      # 4️⃣ Stop any previous bot process on the runner
       - name: Stop previous bot process
         run: |
           echo "Stopping previous bot process if any..."
           pkill -f "node index.js" || echo "No previous process found"
 
-      - name: Start bot in background
+      # 5️⃣ Run bot with auto-restart and logging
+      - name: Run bot with logging
         run: |
-          echo "Starting WhatsApp bot in background..."
+          echo "Starting WhatsApp bot..."
           mkdir -p logs
-          nohup node index.js >> logs/bot.log 2>&1 &
-          echo $! > bot.pid
+          nohup bash -c 'while true; do node index.js >> logs/bot.log 2>&1; echo "$(date "+%Y-%m-%d %H:%M:%S") - Bot crashed or stopped. Restarting in 5s..." >> logs/bot.log; sleep 5; done' &
+          sleep 5
+          tail -f logs/bot.log
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
+      # 6️⃣ Upload logs after workflow finishes
       - name: Upload bot logs
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: bot-logs
-          path: logs/bot.log
+          path: logs/bot.log 
