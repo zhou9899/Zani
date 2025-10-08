@@ -1,35 +1,41 @@
-name: Run WhatsApp Bot
+# .github/workflows/run-bot.yml
+name: Run Zani Bot
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  run-bot:
+  bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
 
     steps:
-      - name: 🧩 Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: 🧠 Setup Node.js 20
-        uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 24
           cache: "npm"
 
-      - name: 📦 Install dependencies
-        run: |
-          npm install
-          npm install @groq/sdk@git+https://github.com/groq-ai/sdk.git
+      - name: Install dependencies
+        run: npm install
 
-      - name: 🚀 Start WhatsApp Bot
-        run: node index.js
+      - name: Install localtunnel globally
+        run: npm install -g localtunnel
+
+      - name: Verify Environment Variables
+        run: |
+          echo "GROQ_API_KEY loaded? $GROQ_API_KEY"
+          echo "WHATSAPP_ENV loaded? $WHATSAPP_ENV"
+
+      - name: Start Bot
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
+        run: |
+          echo "Starting Zani Bot..."
+          node index.js

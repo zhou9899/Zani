@@ -1,5 +1,5 @@
 // ============================================
-// index.js — Zani Bot (Stable, Auto-Healing, Groq API ready)
+// index.js — Zani Bot (Stable, Auto-Healing)
 // ============================================
 
 import fs from "fs";
@@ -7,15 +7,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import qrcodeTerminal from "qrcode-terminal";
-import https from "https";
-import axios from "axios";
-import { GroqClient } from "@groq/sdk";
 import {
   makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
   Browsers,
 } from "@whiskeysockets/baileys";
+import https from "https";
+import axios from "axios";
+import { GroqClient } from "groq-sdk"; // ✅ fixed import
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,15 +46,6 @@ const secureAxios = axios.create({
   },
 });
 global.axios = secureAxios;
-
-// ==================== GROQ CLIENT ====================
-if (!process.env.GROQ_API_KEY) {
-  console.error("❌ GROQ_API_KEY is missing!");
-  process.exit(1);
-}
-
-const groq = new GroqClient({ apiKey: process.env.GROQ_API_KEY });
-global.groq = groq;
 
 // ==================== GLOBAL CONFIG ====================
 const ownersFile = path.join(__dirname, "owners.json");
@@ -168,6 +159,7 @@ async function startBot() {
     currentSocket = sock;
     sock.ev.on("creds.update", saveCreds);
 
+    // Auto-refresh missing sessions
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) {
         qrcodeTerminal.generate(qr, { small: true });
@@ -178,7 +170,6 @@ async function startBot() {
         console.log("✅ Connected!");
         isConnecting = false;
 
-        // Heal missing sessions
         try { await sock.sendPresenceUpdate("available"); } catch {}
 
         const [{ loadCommands }, { handleMessages }] = await Promise.all([
@@ -211,7 +202,7 @@ async function startBot() {
 }
 
 // ==================== INITIALIZE ====================
-console.log("🤖 Zani Bot — Fast & Secure with Groq API");
+console.log("🤖 Zani Bot — Fast & Secure");
 startBot();
 
 // ==================== AUTO-RESTART ====================
@@ -220,4 +211,4 @@ setInterval(() => {
     console.log("🔄 Scheduled maintenance restart...");
     currentSocket.ws.close();
   }
-}, 6 * 60 * 60 * 1000); // every 6 hours	
+}, 6 * 60 * 60 * 1000); // every 6 hours
