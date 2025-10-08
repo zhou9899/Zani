@@ -1,4 +1,4 @@
- name: Run WhatsApp Bot
+name: Run WhatsApp Bot
 
 on:
   push:
@@ -30,11 +30,17 @@ jobs:
           echo "Stopping previous bot process if any..."
           pkill -f "node index.js" || echo "No previous process found"
 
-      - name: Run bot with logging
+      - name: Run WhatsApp bot with auto-restart and logging
         run: |
           echo "Starting WhatsApp bot..."
           mkdir -p logs
-          nohup bash -c 'while true; do node index.js >> logs/bot.log 2>&1; echo "$(date '+%Y-%m-%d %H:%M:%S') - Bot crashed or stopped. Restarting in 5s..." >> logs/bot.log; sleep 5; done' &
+          nohup bash -c '
+          while true; do
+            node index.js >> logs/bot.log 2>&1
+            echo "$(date "+%Y-%m-%d %H:%M:%S") - Bot crashed or stopped. Restarting in 5s..." >> logs/bot.log
+            sleep 5
+          done
+          ' &
           sleep 5
           tail -f logs/bot.log
         env:
