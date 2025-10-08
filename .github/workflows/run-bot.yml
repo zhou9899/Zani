@@ -1,0 +1,52 @@
+name: Run WhatsApp Bot
+
+concurrency:
+  group: zani-bot
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Kill previous bot instance if exists
+        run: |
+          echo "Checking for previous bot process..."
+          pids=$(pgrep -f "node index.js")
+          if [ -n "$pids" ]; then
+            echo "Killing old bot process: $pids"
+            kill -9 $pids
+          else
+            echo "No old bot process found."
+          fi
+
+      - name: Start bot
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+          WHATSAPP_PASSWORD: ${{ secrets.WHATSAPP_PASSWORD }}
+        run: |
+          echo "Starting bot..."
+          nohup node index.js > bot.log 2>&1 &
+          sleep 5
+          echo "Bot started."
+
+      - name: Show bot log
+        run: tail -n 20 bot.log
