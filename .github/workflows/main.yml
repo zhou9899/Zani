@@ -6,7 +6,7 @@ on:
     - cron: "0 */6 * * *"      # Auto restart every 6 hours
   push:
     branches:
-      - main                   # Run on push to main
+      - main                   # Run whenever code is pushed to main
 
 jobs:
   run-bot:
@@ -14,21 +14,29 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      # 1️⃣ Checkout the repo
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Node.js 20
       - name: 🧠 Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
 
+      # 3️⃣ Install pnpm
+      - name: ⚡ Install pnpm
+        run: npm install -g pnpm
+
+      # 4️⃣ Install dependencies via pnpm
       - name: 📦 Install dependencies
         run: |
-          npm ci                # clean install from package-lock.json
-          npm install @groq/sdk # ensure Groq SDK installed
+          pnpm install
+          # If @groq/sdk is from GitHub
+          pnpm add github:groq/groq-sdk
 
-      - name: 🔍 Debug environment variables
+      # 5️⃣ Debug environment variables
+      - name: 🔍 Debug env
         run: |
           echo "GROQ_API_KEY loaded? $GROQ_API_KEY"
           echo "WHATSAPP_ENV loaded? $WHATSAPP_ENV"
@@ -36,10 +44,9 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
 
+      # 6️⃣ Start the bot
       - name: 🚀 Start WhatsApp Bot
-        run: |
-          pkill -f node || true   # kill any existing node processes
-          node index.js
+        run: node index.js
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
