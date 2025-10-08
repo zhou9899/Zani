@@ -26,5 +26,21 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 Start WhatsApp Bot
+      - name: 🛑 Kill previous node processes
+        run: |
+          pkill -f node || true
+          ps aux | grep node
 
+      - name: 🔍 Debug environment variables
+        run: |
+          echo "GROQ_API_KEY is set: $GROQ_API_KEY"
+          echo "WHATSAPP_ENV is set: $WHATSAPP_ENV"
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
+
+      - name: 🚀 Start WhatsApp Bot
+        run: node index.js
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
