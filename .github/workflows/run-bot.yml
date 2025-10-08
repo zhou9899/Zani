@@ -4,32 +4,49 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+
+concurrency:
+  group: whatsapp-bot
+  cancel-in-progress: true  # Stops previous workflow if a new push occurs
 
 jobs:
-  run-bot:
+  deploy:
     runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
     steps:
-      - name: Checkout Repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Kill Previous Bot Process
+      - name: Install dependencies
         run: |
-          echo "Checking for previous bot process..."
-          pkill -f "node index.js" || echo "No previous process found, continuing..."
-
-      - name: Start Bot
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: |
-          echo "Starting Zani Bot..."
+          npm install
           npm install -g localtunnel
-          node index.js
+          npm audit fix --force || echo "Audit fix completed"
+
+      - name: Stop previous bot process
+        run: |
+          echo "Stopping previous bot process if any..."
+          pkill -f "node index.js" || echo "No previous process found"
+
+      - name: Clean broken submodules
+        run: |
+          git config -f .gitmodules --remove-section submodule.PrimonProto || echo "No broken submodule found"
+          git add .gitmodules || echo "Nothing to add"
+          git commit -m "Remove broken submodule entry" || echo "Nothing to commit"
+
+      - name: Run WhatsApp Bot with logging and auto-restart
+        run: |
+          echo "Starting WhatsApp bot with logging..."
+          mkdir -p logs
+          while true; do
+            node index.js >> logs/bot.log 2>&1
+            echo "$(date '+%Y-%m-%d %H:%M:%S') - Bot crashed or stopped. Restarting in 5s..." >> logs/bot.log
+            sleep 5
+          done  
