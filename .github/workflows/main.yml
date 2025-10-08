@@ -1,17 +1,17 @@
 name: Run WhatsApp Bot
 
 on:
-  workflow_dispatch:           # Manual run
+  workflow_dispatch:          # Manual run
   schedule:
-    - cron: "0 */6 * * *"      # Auto restart every 6 hours
+    - cron: "0 */6 * * *"     # Auto restart every 6 hours
   push:
     branches:
-      - main                   # Run whenever code is pushed to main
+      - main                  # Run whenever code is pushed to main
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 360      # Max run time
 
     steps:
       - name: 🧩 Checkout repository
@@ -26,7 +26,21 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
+      - name: 🛠️ Install yt-dlp for GitHub Actions
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yt-dlp
+
+      - name: 🔍 Debug environment variables
+        run: |
+          echo "GROQ_API_KEY is set: $GROQ_API_KEY"
+          echo "WHATSAPP_ENV is set: $WHATSAPP_ENV"
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
+
       - name: 🚀 Start WhatsApp Bot
         run: node index.js
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
