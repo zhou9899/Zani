@@ -1,56 +1,46 @@
 name: Run WhatsApp Bot
 
 on:
-  workflow_dispatch:           # Manual run
+  workflow_dispatch:          # Manual run
   schedule:
-    - cron: "0 */6 * * *"      # Auto restart every 6 hours
+    - cron: "0 */6 * * *"     # Auto restart every 6 hours
   push:
     branches:
-      - main                   # Run on every push to main
+      - main                  # Run on push to main
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 360        # Max run time for the bot
+    timeout-minutes: 360      # Max run time
 
     steps:
-      # 1️⃣ Checkout repository
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Node.js
       - name: 🧠 Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      # 3️⃣ Install dependencies
-      - name: 📦 Install npm dependencies
+      - name: 📦 Install dependencies
         run: npm install
 
-      # 4️⃣ Install yt-dlp for music commands
       - name: 🛠️ Install yt-dlp
         run: |
-          sudo apt-get update
-          sudo apt-get install -y yt-dlp ffmpeg
+          apt-get update
+          apt-get install -y yt-dlp
 
-      # 5️⃣ Debug environment (confirm secrets are loaded)
       - name: 🔍 Debug environment variables
         run: |
-          echo "GROQ_API_KEY: $GROQ_API_KEY"
-          echo "WHATSAPP_ENV: $WHATSAPP_ENV"
+          echo "GROQ_API_KEY is set: $GROQ_API_KEY"
+          echo "WHATSAPP_ENV is set: $WHATSAPP_ENV"
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
 
-      # 6️⃣ Start WhatsApp Bot
       - name: 🚀 Start WhatsApp Bot
-        run: |
-          echo "Killing any previous Node processes (just in case)..."
-          pkill -f node || true
-          echo "Starting Node..."
-          node index.js
+        run: node index.js
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
