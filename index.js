@@ -1,5 +1,5 @@
 // ============================================
-// index.js — Zani Bot (Stable, Auto-Healing)
+// index.js — Zani Bot (Clean & Stable)
 // ============================================
 
 import fs from "fs";
@@ -15,6 +15,7 @@ import {
 } from "@whiskeysockets/baileys";
 import https from "https";
 import axios from "axios";
+import GroqClient from "@groq/sdk";
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,19 +47,23 @@ const secureAxios = axios.create({
 });
 global.axios = secureAxios;
 
+// ==================== GROQ API ====================
+if (!process.env.GROQ_API_KEY) {
+  console.warn("⚠️ GROQ_API_KEY not set! Check your GitHub secrets or .env");
+}
+
+global.groq = new GroqClient({
+  apiKey: process.env.GROQ_API_KEY || "", // loads from env
+});
+
 // ==================== GLOBAL CONFIG ====================
 const ownersFile = path.join(__dirname, "owners.json");
 const modsFile = path.join(__dirname, "moderators.json");
 
-global.owners = fs.existsSync(ownersFile)
-  ? JSON.parse(fs.readFileSync(ownersFile, "utf8"))
-  : [];
+global.owners = fs.existsSync(ownersFile) ? JSON.parse(fs.readFileSync(ownersFile, "utf8")) : [];
+global.moderators = fs.existsSync(modsFile) ? JSON.parse(fs.readFileSync(modsFile, "utf8")) : [];
 
-global.moderators = fs.existsSync(modsFile)
-  ? JSON.parse(fs.readFileSync(modsFile, "utf8"))
-  : [];
-
-// Watch for updates
+// Watch for changes
 [ownersFile, modsFile].forEach(file => {
   if (fs.existsSync(file)) {
     fs.watchFile(file, { interval: 5000 }, () => {
@@ -127,7 +132,7 @@ async function startBot() {
   try {
     const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
 
-    // --- Silence noisy Baileys logs ---
+    // Silence noisy Baileys logs
     const originalLog = console.log;
     const ignoredPatterns = [
       "Closing stale open session",
@@ -159,7 +164,7 @@ async function startBot() {
     currentSocket = sock;
     sock.ev.on("creds.update", saveCreds);
 
-    // --- Auto-refresh missing sessions (fix decryption issues) ---
+    // Connection updates
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) {
         qrcodeTerminal.generate(qr, { small: true });
@@ -171,10 +176,9 @@ async function startBot() {
         isConnecting = false;
 
         // Heal missing sessions
-        try {
-          await sock.sendPresenceUpdate("available");
-        } catch { /* ignore */ }
+        try { await sock.sendPresenceUpdate("available"); } catch {}
 
+        // Load commands and handler
         const [{ loadCommands }, { handleMessages }] = await Promise.all([
           import("./handlers/commandLoader.js"),
           import("./handlers/messageHandler.js"),
@@ -195,9 +199,9 @@ async function startBot() {
           setTimeout(startBot, code === DisconnectReason.loggedOut ? 3000 : 10000);
       }
 
-      if (connection === "connecting")
-        console.log("🔄 Reconnecting...");
+      if (connection === "connecting") console.log("🔄 Reconnecting...");
     });
+
   } catch (err) {
     console.error("❌ Startup error:", err.message);
     isConnecting = false;
@@ -216,4 +220,3 @@ setInterval(() => {
     currentSocket.ws.close();
   }
 }, 6 * 60 * 60 * 1000); // every 6 hours
-

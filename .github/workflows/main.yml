@@ -26,15 +26,15 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🛑 Kill previous node processes
+      - name: 🛠️ Install yt-dlp for GitHub Actions
         run: |
-          pkill -f node || true
-          ps aux | grep node
+          sudo apt-get update
+          sudo apt-get install -y yt-dlp
 
       - name: 🔍 Debug environment variables
         run: |
-          echo "GROQ_API_KEY is set: $GROQ_API_KEY"
-          echo "WHATSAPP_ENV is set: $WHATSAPP_ENV"
+          echo "GROQ_API_KEY loaded? $GROQ_API_KEY"
+          echo "WHATSAPP_ENV loaded? $WHATSAPP_ENV"
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
@@ -43,4 +43,4 @@ jobs:
         run: node index.js
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
+          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}  
