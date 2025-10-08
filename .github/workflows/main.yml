@@ -1,12 +1,12 @@
 name: Run WhatsApp Bot
 
 on:
-  workflow_dispatch:           # Manual run
+  workflow_dispatch:
   schedule:
-    - cron: "0 */6 * * *"      # Auto restart every 6 hours
+    - cron: "0 */6 * * *"
   push:
     branches:
-      - main                   # Run whenever code is pushed to main
+      - main
 
 jobs:
   run-bot:
@@ -14,37 +14,20 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      # 1️⃣ Checkout the repo
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Node.js 20
       - name: 🧠 Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: "npm"
 
-      # 3️⃣ Install pnpm
-      - name: ⚡ Install pnpm
-        run: npm install -g pnpm
-
-      # 4️⃣ Install dependencies via pnpm
       - name: 📦 Install dependencies
         run: |
-          pnpm install
-          # If @groq/sdk is from GitHub
-          pnpm add github:groq/groq-sdk
+          npm install
+          npm install @groq/sdk@git+https://github.com/groq-ai/sdk.git
 
-      # 5️⃣ Debug environment variables
-      - name: 🔍 Debug env
-        run: |
-          echo "GROQ_API_KEY loaded? $GROQ_API_KEY"
-          echo "WHATSAPP_ENV loaded? $WHATSAPP_ENV"
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          WHATSAPP_ENV: ${{ secrets.WHATSAPP_ENV }}
-
-      # 6️⃣ Start the bot
       - name: 🚀 Start WhatsApp Bot
         run: node index.js
         env:

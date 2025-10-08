@@ -1,5 +1,5 @@
 // ============================================
-// index.js — Zani Bot (Clean & Stable)
+// index.js — Zani Bot (Stable, Auto-Healing, Groq API ready)
 // ============================================
 
 import fs from "fs";
@@ -7,15 +7,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import qrcodeTerminal from "qrcode-terminal";
+import https from "https";
+import axios from "axios";
+import { GroqClient } from "@groq/sdk";
 import {
   makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
   Browsers,
 } from "@whiskeysockets/baileys";
-import https from "https";
-import axios from "axios";
-import GroqClient from "@groq/sdk";
 
 dotenv.config();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,23 +47,27 @@ const secureAxios = axios.create({
 });
 global.axios = secureAxios;
 
-// ==================== GROQ API ====================
+// ==================== GROQ CLIENT ====================
 if (!process.env.GROQ_API_KEY) {
-  console.warn("⚠️ GROQ_API_KEY not set! Check your GitHub secrets or .env");
+  console.error("❌ GROQ_API_KEY is missing!");
+  process.exit(1);
 }
 
-global.groq = new GroqClient({
-  apiKey: process.env.GROQ_API_KEY || "", // loads from env
-});
+const groq = new GroqClient({ apiKey: process.env.GROQ_API_KEY });
+global.groq = groq;
 
 // ==================== GLOBAL CONFIG ====================
 const ownersFile = path.join(__dirname, "owners.json");
 const modsFile = path.join(__dirname, "moderators.json");
 
-global.owners = fs.existsSync(ownersFile) ? JSON.parse(fs.readFileSync(ownersFile, "utf8")) : [];
-global.moderators = fs.existsSync(modsFile) ? JSON.parse(fs.readFileSync(modsFile, "utf8")) : [];
+global.owners = fs.existsSync(ownersFile)
+  ? JSON.parse(fs.readFileSync(ownersFile, "utf8"))
+  : [];
+global.moderators = fs.existsSync(modsFile)
+  ? JSON.parse(fs.readFileSync(modsFile, "utf8"))
+  : [];
 
-// Watch for changes
+// Watch for updates
 [ownersFile, modsFile].forEach(file => {
   if (fs.existsSync(file)) {
     fs.watchFile(file, { interval: 5000 }, () => {
@@ -164,7 +168,6 @@ async function startBot() {
     currentSocket = sock;
     sock.ev.on("creds.update", saveCreds);
 
-    // Connection updates
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) {
         qrcodeTerminal.generate(qr, { small: true });
@@ -178,7 +181,6 @@ async function startBot() {
         // Heal missing sessions
         try { await sock.sendPresenceUpdate("available"); } catch {}
 
-        // Load commands and handler
         const [{ loadCommands }, { handleMessages }] = await Promise.all([
           import("./handlers/commandLoader.js"),
           import("./handlers/messageHandler.js"),
@@ -201,7 +203,6 @@ async function startBot() {
 
       if (connection === "connecting") console.log("🔄 Reconnecting...");
     });
-
   } catch (err) {
     console.error("❌ Startup error:", err.message);
     isConnecting = false;
@@ -210,7 +211,7 @@ async function startBot() {
 }
 
 // ==================== INITIALIZE ====================
-console.log("🤖 Zani Bot — Fast & Secure");
+console.log("🤖 Zani Bot — Fast & Secure with Groq API");
 startBot();
 
 // ==================== AUTO-RESTART ====================
@@ -219,4 +220,4 @@ setInterval(() => {
     console.log("🔄 Scheduled maintenance restart...");
     currentSocket.ws.close();
   }
-}, 6 * 60 * 60 * 1000); // every 6 hours
+}, 6 * 60 * 60 * 1000); // every 6 hours	
